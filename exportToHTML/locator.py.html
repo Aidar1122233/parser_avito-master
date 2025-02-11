@@ -1,0 +1,40 @@
+<html>
+<head>
+<title>locator.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #5f826b; font-style: italic;}
+.s4 { color: #6aab73;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+locator.py</font>
+</center></td></tr></table>
+<pre><span class="s0">from </span><span class="s1">selenium</span><span class="s2">.</span><span class="s1">webdriver</span><span class="s2">.</span><span class="s1">common</span><span class="s2">.</span><span class="s1">by </span><span class="s0">import </span><span class="s1">By</span>
+
+
+<span class="s0">class </span><span class="s1">LocatorAvito</span><span class="s2">:</span>
+    <span class="s3">&quot;&quot;&quot;Все необходимые селекторы&quot;&quot;&quot;</span>
+    <span class="s1">TITLES </span><span class="s2">= (</span><span class="s1">By</span><span class="s2">.</span><span class="s1">CSS_SELECTOR</span><span class="s2">, </span><span class="s4">&quot;div[itemtype*='http://schema.org/Product']&quot;</span><span class="s2">)</span>
+    <span class="s1">NAME </span><span class="s2">= (</span><span class="s1">By</span><span class="s2">.</span><span class="s1">CSS_SELECTOR</span><span class="s2">, </span><span class="s4">&quot;[itemprop='name']&quot;</span><span class="s2">)</span>
+    <span class="s1">DESCRIPTIONS </span><span class="s2">= (</span><span class="s1">By</span><span class="s2">.</span><span class="s1">CSS_SELECTOR</span><span class="s2">, </span><span class="s4">&quot;meta[itemprop='description']&quot;</span><span class="s2">)</span>
+    <span class="s1">DESCRIPTIONS_FULL_PAGE </span><span class="s2">= (</span><span class="s1">By</span><span class="s2">.</span><span class="s1">CSS_SELECTOR</span><span class="s2">, </span><span class="s4">&quot;[data-marker='item-view/item-description']&quot;</span><span class="s2">)</span>
+    <span class="s1">URL </span><span class="s2">= (</span><span class="s1">By</span><span class="s2">.</span><span class="s1">CSS_SELECTOR</span><span class="s2">, </span><span class="s4">&quot;[itemprop='url']&quot;</span><span class="s2">)</span>
+    <span class="s1">PRICE </span><span class="s2">= (</span><span class="s1">By</span><span class="s2">.</span><span class="s1">CSS_SELECTOR</span><span class="s2">, </span><span class="s4">&quot;[itemprop='price']&quot;</span><span class="s2">)</span>
+    <span class="s1">TOTAL_VIEWS </span><span class="s2">= (</span><span class="s1">By</span><span class="s2">.</span><span class="s1">CSS_SELECTOR</span><span class="s2">, </span><span class="s4">&quot;[data-marker='item-view/total-views']&quot;</span><span class="s2">)</span>
+    <span class="s1">DATE_PUBLIC </span><span class="s2">= (</span><span class="s1">By</span><span class="s2">.</span><span class="s1">CSS_SELECTOR</span><span class="s2">, </span><span class="s4">&quot;[data-marker='item-view/item-date']&quot;</span><span class="s2">)</span>
+    <span class="s1">SELLER_NAME </span><span class="s2">= (</span><span class="s1">By</span><span class="s2">.</span><span class="s1">CSS_SELECTOR</span><span class="s2">, </span><span class="s4">&quot;[data-marker='seller-info/label']&quot;</span><span class="s2">)</span>
+    <span class="s1">SELLER_LINK </span><span class="s2">= (</span><span class="s1">By</span><span class="s2">.</span><span class="s1">CSS_SELECTOR</span><span class="s2">, </span><span class="s4">&quot;[data-marker='seller-link/link']&quot;</span><span class="s2">)</span>
+    <span class="s1">COMPANY_NAME </span><span class="s2">= (</span><span class="s1">By</span><span class="s2">.</span><span class="s1">CSS_SELECTOR</span><span class="s2">, </span><span class="s4">&quot;[data-marker='seller-link/link']&quot;</span><span class="s2">)</span>
+    <span class="s1">COMPANY_NAME_TEXT </span><span class="s2">= (</span><span class="s1">By</span><span class="s2">.</span><span class="s1">CSS_SELECTOR</span><span class="s2">, </span><span class="s4">&quot;span&quot;</span><span class="s2">)</span>
+    <span class="s1">GEO </span><span class="s2">= (</span><span class="s1">By</span><span class="s2">.</span><span class="s1">CSS_SELECTOR</span><span class="s2">, </span><span class="s4">&quot;div[class*='style-item-address']&quot;</span><span class="s2">)</span>
+
+</pre>
+</body>
+</html>

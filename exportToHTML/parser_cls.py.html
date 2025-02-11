@@ -1,0 +1,509 @@
+<html>
+<head>
+<title>parser_cls.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #2aacb8;}
+.s4 { color: #6aab73;}
+.s5 { color: #5f826b; font-style: italic;}
+.s6 { color: #7a7e85;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+parser_cls.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">random</span>
+<span class="s0">import </span><span class="s1">threading</span>
+<span class="s0">import </span><span class="s1">time</span>
+<span class="s0">import </span><span class="s1">re</span>
+<span class="s0">from </span><span class="s1">urllib</span><span class="s2">.</span><span class="s1">parse </span><span class="s0">import </span><span class="s1">urlparse</span><span class="s2">, </span><span class="s1">parse_qs</span><span class="s2">, </span><span class="s1">urlencode</span><span class="s2">, </span><span class="s1">urlunparse</span>
+
+<span class="s0">import </span><span class="s1">requests</span>
+<span class="s0">from </span><span class="s1">notifiers</span><span class="s2">.</span><span class="s1">logging </span><span class="s0">import </span><span class="s1">NotificationHandler</span>
+<span class="s0">from </span><span class="s1">seleniumbase </span><span class="s0">import </span><span class="s1">SB</span>
+<span class="s0">from </span><span class="s1">loguru </span><span class="s0">import </span><span class="s1">logger</span>
+
+<span class="s0">from </span><span class="s1">custom_exception </span><span class="s0">import </span><span class="s1">StopEventException</span>
+<span class="s0">from </span><span class="s1">db_service </span><span class="s0">import </span><span class="s1">SQLiteDBHandler</span>
+<span class="s0">from </span><span class="s1">locator </span><span class="s0">import </span><span class="s1">LocatorAvito</span>
+<span class="s0">from </span><span class="s1">xlsx_service </span><span class="s0">import </span><span class="s1">XLSXHandler</span>
+
+<span class="s0">import </span><span class="s1">configparser</span>
+<span class="s0">import </span><span class="s1">requests</span>
+<span class="s0">from </span><span class="s1">bs4 </span><span class="s0">import </span><span class="s1">BeautifulSoup</span>
+<span class="s0">import </span><span class="s1">configparser</span>
+<span class="s0">import </span><span class="s1">time</span>
+<span class="s0">import </span><span class="s1">random</span>
+
+<span class="s1">time</span><span class="s2">.</span><span class="s1">sleep</span><span class="s2">(</span><span class="s1">random</span><span class="s2">.</span><span class="s1">randint</span><span class="s2">(</span><span class="s3">2</span><span class="s2">, </span><span class="s3">5</span><span class="s2">))</span>
+
+<span class="s1">config </span><span class="s2">= </span><span class="s1">configparser</span><span class="s2">.</span><span class="s1">ConfigParser</span><span class="s2">()</span>
+<span class="s1">config</span><span class="s2">.</span><span class="s1">read</span><span class="s2">(</span><span class="s4">&quot;settings.ini&quot;</span><span class="s2">)</span>
+
+<span class="s1">CITY </span><span class="s2">= </span><span class="s1">config</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;search&quot;</span><span class="s2">, </span><span class="s4">&quot;city&quot;</span><span class="s2">)</span>
+<span class="s1">CATEGORY </span><span class="s2">= </span><span class="s1">config</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;search&quot;</span><span class="s2">, </span><span class="s4">&quot;category&quot;</span><span class="s2">)</span>
+<span class="s1">PRICE_FROM </span><span class="s2">= </span><span class="s1">config</span><span class="s2">.</span><span class="s1">getint</span><span class="s2">(</span><span class="s4">&quot;search&quot;</span><span class="s2">, </span><span class="s4">&quot;price_from&quot;</span><span class="s2">)</span>
+<span class="s1">PRICE_TO </span><span class="s2">= </span><span class="s1">config</span><span class="s2">.</span><span class="s1">getint</span><span class="s2">(</span><span class="s4">&quot;search&quot;</span><span class="s2">, </span><span class="s4">&quot;price_to&quot;</span><span class="s2">)</span>
+<span class="s1">BRAND </span><span class="s2">= </span><span class="s1">config</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;search&quot;</span><span class="s2">, </span><span class="s4">&quot;brand&quot;</span><span class="s2">)</span>
+<span class="s1">MODEL </span><span class="s2">= </span><span class="s1">config</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;search&quot;</span><span class="s2">, </span><span class="s4">&quot;model&quot;</span><span class="s2">)</span>
+
+<span class="s0">class </span><span class="s1">AvitoParse</span><span class="s2">:</span>
+    <span class="s5">&quot;&quot;&quot; 
+    Парсинг  товаров на avito.ru 
+    &quot;&quot;&quot;</span>
+
+    <span class="s0">def </span><span class="s1">__init__</span><span class="s2">(</span><span class="s1">self</span><span class="s2">, </span><span class="s1">proxy</span><span class="s2">=</span><span class="s0">None</span><span class="s2">, **</span><span class="s1">kwargs</span><span class="s2">):</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">proxy </span><span class="s2">= </span><span class="s1">proxy</span>
+
+    <span class="s0">def </span><span class="s1">__init__</span><span class="s2">(</span><span class="s1">self</span><span class="s2">,</span>
+                 <span class="s1">url</span><span class="s2">: </span><span class="s1">list</span><span class="s2">,</span>
+                 <span class="s1">keysword_list</span><span class="s2">: </span><span class="s1">list</span><span class="s2">,</span>
+                 <span class="s1">keysword_black_list</span><span class="s2">: </span><span class="s1">list</span><span class="s2">,</span>
+                 <span class="s1">count</span><span class="s2">: </span><span class="s1">int </span><span class="s2">= </span><span class="s3">5</span><span class="s2">,</span>
+                 <span class="s1">tg_token</span><span class="s2">: </span><span class="s1">str </span><span class="s2">= </span><span class="s0">None</span><span class="s2">,</span>
+                 <span class="s1">max_price</span><span class="s2">: </span><span class="s1">int </span><span class="s2">= </span><span class="s3">0</span><span class="s2">,</span>
+                 <span class="s1">min_price</span><span class="s2">: </span><span class="s1">int </span><span class="s2">= </span><span class="s3">0</span><span class="s2">,</span>
+                 <span class="s1">geo</span><span class="s2">: </span><span class="s1">str </span><span class="s2">= </span><span class="s0">None</span><span class="s2">,</span>
+                 <span class="s1">debug_mode</span><span class="s2">: </span><span class="s1">int </span><span class="s2">= </span><span class="s3">0</span><span class="s2">,</span>
+                 <span class="s1">need_more_info</span><span class="s2">: </span><span class="s1">int </span><span class="s2">= </span><span class="s3">1</span><span class="s2">,</span>
+                 <span class="s1">proxy</span><span class="s2">: </span><span class="s1">str </span><span class="s2">= </span><span class="s0">None</span><span class="s2">,</span>
+                 <span class="s1">proxy_change_url</span><span class="s2">: </span><span class="s1">str </span><span class="s2">= </span><span class="s0">None</span><span class="s2">,</span>
+                 <span class="s1">stop_event</span><span class="s2">=</span><span class="s0">None</span><span class="s2">,</span>
+                 <span class="s1">max_views</span><span class="s2">: </span><span class="s1">int </span><span class="s2">= </span><span class="s0">None</span><span class="s2">,</span>
+                 <span class="s1">fast_speed</span><span class="s2">: </span><span class="s1">int </span><span class="s2">= </span><span class="s3">0</span>
+                 <span class="s2">):</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">url_list </span><span class="s2">= </span><span class="s1">url</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">url </span><span class="s2">= </span><span class="s0">None</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">keys_word </span><span class="s2">= </span><span class="s1">keysword_list </span><span class="s0">or None</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">keys_black_word </span><span class="s2">= </span><span class="s1">keysword_black_list </span><span class="s0">or None</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">count </span><span class="s2">= </span><span class="s1">count</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">data </span><span class="s2">= []</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">tg_token </span><span class="s2">= </span><span class="s1">tg_token</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">title_file </span><span class="s2">= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">__get_file_title</span><span class="s2">()</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">max_price </span><span class="s2">= </span><span class="s1">int</span><span class="s2">(</span><span class="s1">max_price</span><span class="s2">)</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">min_price </span><span class="s2">= </span><span class="s1">int</span><span class="s2">(</span><span class="s1">min_price</span><span class="s2">)</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">max_views </span><span class="s2">= </span><span class="s1">max_views </span><span class="s0">if </span><span class="s1">max_views </span><span class="s0">and </span><span class="s1">max_views </span><span class="s2">!= </span><span class="s3">0 </span><span class="s0">else None</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">geo </span><span class="s2">= </span><span class="s1">geo</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">debug_mode </span><span class="s2">= </span><span class="s1">debug_mode</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">need_more_info </span><span class="s2">= </span><span class="s1">need_more_info</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">proxy </span><span class="s2">= </span><span class="s1">proxy</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">proxy_change_url </span><span class="s2">= </span><span class="s1">proxy_change_url</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">stop_event </span><span class="s2">= </span><span class="s1">stop_event </span><span class="s0">or </span><span class="s1">threading</span><span class="s2">.</span><span class="s1">Event</span><span class="s2">()</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">db_handler </span><span class="s2">= </span><span class="s1">SQLiteDBHandler</span><span class="s2">()</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">xlsx_handler </span><span class="s2">= </span><span class="s1">XLSXHandler</span><span class="s2">(</span><span class="s1">self</span><span class="s2">.</span><span class="s1">title_file</span><span class="s2">)</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">fast_speed </span><span class="s2">= </span><span class="s1">fast_speed</span>
+
+
+
+    <span class="s0">def </span><span class="s1">__init__</span><span class="s2">(</span><span class="s1">self</span><span class="s2">, </span><span class="s1">config_file</span><span class="s2">=</span><span class="s4">&quot;settings.ini&quot;</span><span class="s2">):</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">config </span><span class="s2">= </span><span class="s1">configparser</span><span class="s2">.</span><span class="s1">ConfigParser</span><span class="s2">()</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">config</span><span class="s2">.</span><span class="s1">read</span><span class="s2">(</span><span class="s1">config_file</span><span class="s2">)</span>
+
+        <span class="s6"># Настройки поиска</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">city </span><span class="s2">= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">config</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;search&quot;</span><span class="s2">, </span><span class="s4">&quot;city&quot;</span><span class="s2">, </span><span class="s1">fallback</span><span class="s2">=</span><span class="s4">&quot;all&quot;</span><span class="s2">)</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">category </span><span class="s2">= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">config</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;search&quot;</span><span class="s2">, </span><span class="s4">&quot;category&quot;</span><span class="s2">, </span><span class="s1">fallback</span><span class="s2">=</span><span class="s4">&quot;avtomobili&quot;</span><span class="s2">)</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">price_from </span><span class="s2">= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">config</span><span class="s2">.</span><span class="s1">getint</span><span class="s2">(</span><span class="s4">&quot;search&quot;</span><span class="s2">, </span><span class="s4">&quot;price_from&quot;</span><span class="s2">, </span><span class="s1">fallback</span><span class="s2">=</span><span class="s3">1000000</span><span class="s2">)</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">price_to </span><span class="s2">= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">config</span><span class="s2">.</span><span class="s1">getint</span><span class="s2">(</span><span class="s4">&quot;search&quot;</span><span class="s2">, </span><span class="s4">&quot;price_to&quot;</span><span class="s2">, </span><span class="s1">fallback</span><span class="s2">=</span><span class="s3">3000000</span><span class="s2">)</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">brand </span><span class="s2">= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">config</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;search&quot;</span><span class="s2">, </span><span class="s4">&quot;brand&quot;</span><span class="s2">, </span><span class="s1">fallback</span><span class="s2">=</span><span class="s4">&quot;toyota&quot;</span><span class="s2">).</span><span class="s1">lower</span><span class="s2">()</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">model </span><span class="s2">= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">config</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;search&quot;</span><span class="s2">, </span><span class="s4">&quot;model&quot;</span><span class="s2">, </span><span class="s1">fallback</span><span class="s2">=</span><span class="s4">&quot;camry&quot;</span><span class="s2">).</span><span class="s1">lower</span><span class="s2">()</span>
+
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">base_url </span><span class="s2">= </span><span class="s4">f&quot;https://www.avito.ru/</span><span class="s0">{</span><span class="s1">self</span><span class="s2">.</span><span class="s1">city</span><span class="s0">}</span><span class="s4">/</span><span class="s0">{</span><span class="s1">self</span><span class="s2">.</span><span class="s1">category</span><span class="s0">}</span><span class="s4">&quot;</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">headers </span><span class="s2">= {</span>
+            <span class="s4">&quot;User-Agent&quot;</span><span class="s2">: </span><span class="s4">&quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36&quot;</span>
+        <span class="s2">}</span>
+
+    <span class="s0">def </span><span class="s1">get_listings</span><span class="s2">(</span><span class="s1">self</span><span class="s2">):</span>
+        <span class="s0">if not </span><span class="s1">hasattr</span><span class="s2">(</span><span class="s1">self</span><span class="s2">, </span><span class="s4">'proxy'</span><span class="s2">):  </span><span class="s6"># Проверка, что атрибут proxy существует</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;Атрибут proxy не инициализирован!&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s2">[]</span>
+
+        <span class="s1">proxies </span><span class="s2">= </span><span class="s0">None</span>
+        <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">proxy</span><span class="s2">:  </span><span class="s6"># Проверка, что proxy не None</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">debug</span><span class="s2">(</span><span class="s4">f&quot;Используется прокси: </span><span class="s0">{</span><span class="s1">self</span><span class="s2">.</span><span class="s1">proxy</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+            <span class="s1">proxies </span><span class="s2">= {</span>
+                <span class="s4">&quot;http&quot;</span><span class="s2">: </span><span class="s4">f&quot;http://</span><span class="s0">{</span><span class="s1">self</span><span class="s2">.</span><span class="s1">proxy</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">,</span>
+                <span class="s4">&quot;https&quot;</span><span class="s2">: </span><span class="s4">f&quot;http://</span><span class="s0">{</span><span class="s1">self</span><span class="s2">.</span><span class="s1">proxy</span><span class="s0">}</span><span class="s4">&quot;</span>
+            <span class="s2">}</span>
+        <span class="s0">else</span><span class="s2">:</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">debug</span><span class="s2">(</span><span class="s4">&quot;Прокси не используется.&quot;</span><span class="s2">)</span>
+
+        <span class="s1">response </span><span class="s2">= </span><span class="s1">requests</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">self</span><span class="s2">.</span><span class="s1">base_url</span><span class="s2">, </span><span class="s1">headers</span><span class="s2">=</span><span class="s1">self</span><span class="s2">.</span><span class="s1">headers</span><span class="s2">, </span><span class="s1">proxies</span><span class="s2">=</span><span class="s1">proxies</span><span class="s2">)</span>
+    <span class="s0">def </span><span class="s1">get_listings</span><span class="s2">(</span><span class="s1">self</span><span class="s2">):</span>
+        <span class="s0">try</span><span class="s2">:</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">debug</span><span class="s2">(</span><span class="s4">f&quot;Запрос к URL: </span><span class="s0">{</span><span class="s1">self</span><span class="s2">.</span><span class="s1">base_url</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+
+            <span class="s6"># Настройка прокси (если используется)</span>
+            <span class="s1">proxies </span><span class="s2">= </span><span class="s0">None</span>
+            <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">proxy</span><span class="s2">:</span>
+                <span class="s1">proxies </span><span class="s2">= {</span>
+                    <span class="s4">&quot;http&quot;</span><span class="s2">: </span><span class="s4">f&quot;http://</span><span class="s0">{</span><span class="s1">self</span><span class="s2">.</span><span class="s1">proxy</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">,</span>
+                    <span class="s4">&quot;https&quot;</span><span class="s2">: </span><span class="s4">f&quot;http://</span><span class="s0">{</span><span class="s1">self</span><span class="s2">.</span><span class="s1">proxy</span><span class="s0">}</span><span class="s4">&quot;</span>
+                <span class="s2">}</span>
+
+            <span class="s6"># Заголовки запроса</span>
+            <span class="s1">headers </span><span class="s2">= {</span>
+                <span class="s4">&quot;User-Agent&quot;</span><span class="s2">: </span><span class="s4">&quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36&quot;</span>
+            <span class="s2">}</span>
+
+            <span class="s6"># Выполнение запроса</span>
+            <span class="s1">response </span><span class="s2">= </span><span class="s1">requests</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">self</span><span class="s2">.</span><span class="s1">base_url</span><span class="s2">, </span><span class="s1">headers</span><span class="s2">=</span><span class="s1">self</span><span class="s2">.</span><span class="s1">headers</span><span class="s2">, </span><span class="s1">proxies</span><span class="s2">=</span><span class="s1">proxies</span><span class="s2">)</span>
+            <span class="s1">response</span><span class="s2">.</span><span class="s1">raise_for_status</span><span class="s2">()  </span><span class="s6"># Проверка на ошибки HTTP</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">debug</span><span class="s2">(</span><span class="s4">f&quot;Ответ сервера: </span><span class="s0">{</span><span class="s1">response</span><span class="s2">.</span><span class="s1">status_code</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+
+            <span class="s6"># Парсинг HTML</span>
+            <span class="s1">soup </span><span class="s2">= </span><span class="s1">BeautifulSoup</span><span class="s2">(</span><span class="s1">response</span><span class="s2">.</span><span class="s1">text</span><span class="s2">, </span><span class="s4">&quot;html.parser&quot;</span><span class="s2">)</span>
+            <span class="s1">listings </span><span class="s2">= []</span>
+
+            <span class="s0">for </span><span class="s1">item </span><span class="s0">in </span><span class="s1">soup</span><span class="s2">.</span><span class="s1">find_all</span><span class="s2">(</span><span class="s4">&quot;div&quot;</span><span class="s2">, </span><span class="s1">class_</span><span class="s2">=</span><span class="s4">&quot;iva-item-content-rejJg&quot;</span><span class="s2">):</span>
+                <span class="s1">title_tag </span><span class="s2">= </span><span class="s1">item</span><span class="s2">.</span><span class="s1">find</span><span class="s2">(</span><span class="s4">&quot;h3&quot;</span><span class="s2">)</span>
+                <span class="s1">price_tag </span><span class="s2">= </span><span class="s1">item</span><span class="s2">.</span><span class="s1">find</span><span class="s2">(</span><span class="s4">&quot;span&quot;</span><span class="s2">, </span><span class="s1">class_</span><span class="s2">=</span><span class="s4">&quot;price-text&quot;</span><span class="s2">)</span>
+                <span class="s1">link_tag </span><span class="s2">= </span><span class="s1">item</span><span class="s2">.</span><span class="s1">find</span><span class="s2">(</span><span class="s4">&quot;a&quot;</span><span class="s2">, </span><span class="s1">class_</span><span class="s2">=</span><span class="s4">&quot;link-link-MbQDP&quot;</span><span class="s2">)</span>
+
+                <span class="s0">if </span><span class="s1">title_tag </span><span class="s0">and </span><span class="s1">price_tag </span><span class="s0">and </span><span class="s1">link_tag</span><span class="s2">:</span>
+                    <span class="s1">title </span><span class="s2">= </span><span class="s1">title_tag</span><span class="s2">.</span><span class="s1">text</span><span class="s2">.</span><span class="s1">strip</span><span class="s2">()</span>
+                    <span class="s1">price </span><span class="s2">= </span><span class="s1">price_tag</span><span class="s2">.</span><span class="s1">text</span><span class="s2">.</span><span class="s1">replace</span><span class="s2">(</span><span class="s4">&quot;</span><span class="s0">\xa0</span><span class="s4">&quot;</span><span class="s2">, </span><span class="s4">&quot;&quot;</span><span class="s2">).</span><span class="s1">strip</span><span class="s2">()</span>
+                    <span class="s1">link </span><span class="s2">= </span><span class="s4">&quot;https://www.avito.ru&quot; </span><span class="s2">+ </span><span class="s1">link_tag</span><span class="s2">[</span><span class="s4">&quot;href&quot;</span><span class="s2">]</span>
+                    <span class="s1">listings</span><span class="s2">.</span><span class="s1">append</span><span class="s2">({</span><span class="s4">&quot;title&quot;</span><span class="s2">: </span><span class="s1">title</span><span class="s2">, </span><span class="s4">&quot;price&quot;</span><span class="s2">: </span><span class="s1">price</span><span class="s2">, </span><span class="s4">&quot;link&quot;</span><span class="s2">: </span><span class="s1">link</span><span class="s2">})</span>
+
+            <span class="s0">return </span><span class="s1">listings</span>
+        <span class="s0">except </span><span class="s1">requests</span><span class="s2">.</span><span class="s1">exceptions</span><span class="s2">.</span><span class="s1">RequestException </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s4">f&quot;Ошибка при запросе к Avito: </span><span class="s0">{</span><span class="s1">e</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s2">[]</span>
+
+    <span class="s2">@</span><span class="s1">property</span>
+    <span class="s0">def </span><span class="s1">use_proxy</span><span class="s2">(</span><span class="s1">self</span><span class="s2">) </span><span class="s1">-&gt; bool</span><span class="s2">:</span>
+        <span class="s0">return </span><span class="s1">all</span><span class="s2">([</span><span class="s1">self</span><span class="s2">.</span><span class="s1">proxy</span><span class="s2">, </span><span class="s1">self</span><span class="s2">.</span><span class="s1">proxy_change_url</span><span class="s2">])</span>
+
+    <span class="s0">def </span><span class="s1">ip_block</span><span class="s2">(</span><span class="s1">self</span><span class="s2">) </span><span class="s1">-&gt; </span><span class="s0">None</span><span class="s2">:</span>
+        <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">use_proxy</span><span class="s2">:</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;Блок IP&quot;</span><span class="s2">)</span>
+            <span class="s1">self</span><span class="s2">.</span><span class="s1">change_ip</span><span class="s2">()</span>
+        <span class="s0">else</span><span class="s2">:</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;Блок IP. Прокси нет, поэтому делаю паузу&quot;</span><span class="s2">)</span>
+            <span class="s1">time</span><span class="s2">.</span><span class="s1">sleep</span><span class="s2">(</span><span class="s1">random</span><span class="s2">.</span><span class="s1">randint</span><span class="s2">(</span><span class="s3">300</span><span class="s2">, </span><span class="s3">350</span><span class="s2">))</span>
+
+    <span class="s0">def </span><span class="s1">__get_url</span><span class="s2">(</span><span class="s1">self</span><span class="s2">):</span>
+        <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">f&quot;Открываю страницу: </span><span class="s0">{</span><span class="s1">self</span><span class="s2">.</span><span class="s1">url</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">open</span><span class="s2">(</span><span class="s1">self</span><span class="s2">.</span><span class="s1">url</span><span class="s2">)</span>
+
+        <span class="s0">if </span><span class="s4">&quot;Доступ ограничен&quot; </span><span class="s0">in </span><span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">get_title</span><span class="s2">():</span>
+            <span class="s1">self</span><span class="s2">.</span><span class="s1">ip_block</span><span class="s2">()</span>
+            <span class="s0">return </span><span class="s1">self</span><span class="s2">.</span><span class="s1">__get_url</span><span class="s2">()</span>
+
+    <span class="s0">def </span><span class="s1">__paginator</span><span class="s2">(</span><span class="s1">self</span><span class="s2">):</span>
+        <span class="s5">&quot;&quot;&quot;Кнопка далее&quot;&quot;&quot;</span>
+        <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">'Страница успешно загружена. Просматриваю объявления'</span><span class="s2">)</span>
+        <span class="s0">for </span><span class="s1">i </span><span class="s0">in </span><span class="s1">range</span><span class="s2">(</span><span class="s1">self</span><span class="s2">.</span><span class="s1">count</span><span class="s2">):</span>
+            <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">stop_event</span><span class="s2">.</span><span class="s1">is_set</span><span class="s2">():</span>
+                <span class="s0">break</span>
+            <span class="s0">try</span><span class="s2">:</span>
+                <span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">execute_script</span><span class="s2">(</span><span class="s4">&quot;window.scrollTo(0, document.body.scrollHeight);&quot;</span><span class="s2">)</span>
+            <span class="s0">except </span><span class="s1">Exception</span><span class="s2">:</span>
+                <span class="s0">pass</span>
+            <span class="s1">time</span><span class="s2">.</span><span class="s1">sleep</span><span class="s2">(</span><span class="s3">1</span><span class="s2">)</span>
+            <span class="s1">self</span><span class="s2">.</span><span class="s1">__parse_page</span><span class="s2">()</span>
+            <span class="s1">time</span><span class="s2">.</span><span class="s1">sleep</span><span class="s2">(</span><span class="s1">random</span><span class="s2">.</span><span class="s1">randint</span><span class="s2">(</span><span class="s3">2</span><span class="s2">, </span><span class="s3">4</span><span class="s2">))</span>
+            <span class="s1">self</span><span class="s2">.</span><span class="s1">open_next_btn</span><span class="s2">()</span>
+        <span class="s0">return</span>
+
+    <span class="s0">def </span><span class="s1">open_next_btn</span><span class="s2">(</span><span class="s1">self</span><span class="s2">):</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">url </span><span class="s2">= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">get_next_page_url</span><span class="s2">(</span><span class="s1">url</span><span class="s2">=</span><span class="s1">self</span><span class="s2">.</span><span class="s1">url</span><span class="s2">)</span>
+        <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;Следующая страница&quot;</span><span class="s2">)</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">uc_open</span><span class="s2">(</span><span class="s1">self</span><span class="s2">.</span><span class="s1">url</span><span class="s2">)</span>
+
+    <span class="s2">@</span><span class="s1">staticmethod</span>
+    <span class="s0">def </span><span class="s1">get_next_page_url</span><span class="s2">(</span><span class="s1">url</span><span class="s2">: </span><span class="s1">str</span><span class="s2">):</span>
+        <span class="s5">&quot;&quot;&quot;Получает следующую страницу&quot;&quot;&quot;</span>
+        <span class="s0">try</span><span class="s2">:</span>
+            <span class="s1">url_parts </span><span class="s2">= </span><span class="s1">urlparse</span><span class="s2">(</span><span class="s1">url</span><span class="s2">)</span>
+            <span class="s1">query_params </span><span class="s2">= </span><span class="s1">parse_qs</span><span class="s2">(</span><span class="s1">url_parts</span><span class="s2">.</span><span class="s1">query</span><span class="s2">)</span>
+            <span class="s1">current_page </span><span class="s2">= </span><span class="s1">int</span><span class="s2">(</span><span class="s1">query_params</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'p'</span><span class="s2">, [</span><span class="s3">1</span><span class="s2">])[</span><span class="s3">0</span><span class="s2">])</span>
+            <span class="s1">query_params</span><span class="s2">[</span><span class="s4">'p'</span><span class="s2">] = </span><span class="s1">current_page </span><span class="s2">+ </span><span class="s3">1</span>
+            <span class="s1">new_query </span><span class="s2">= </span><span class="s1">urlencode</span><span class="s2">(</span><span class="s1">query_params</span><span class="s2">, </span><span class="s1">doseq</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+            <span class="s1">next_url </span><span class="s2">= </span><span class="s1">urlunparse</span><span class="s2">((</span><span class="s1">url_parts</span><span class="s2">.</span><span class="s1">scheme</span><span class="s2">, </span><span class="s1">url_parts</span><span class="s2">.</span><span class="s1">netloc</span><span class="s2">, </span><span class="s1">url_parts</span><span class="s2">.</span><span class="s1">path</span><span class="s2">, </span><span class="s1">url_parts</span><span class="s2">.</span><span class="s1">params</span><span class="s2">, </span><span class="s1">new_query</span><span class="s2">,</span>
+                                   <span class="s1">url_parts</span><span class="s2">.</span><span class="s1">fragment</span><span class="s2">))</span>
+            <span class="s0">return </span><span class="s1">next_url</span>
+        <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">err</span><span class="s2">:</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s4">f&quot;Не смог сформировать ссылку на следующую страницу для </span><span class="s0">{</span><span class="s1">url</span><span class="s0">}</span><span class="s4">. Ошибка: </span><span class="s0">{</span><span class="s1">err</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+
+    <span class="s0">def </span><span class="s1">__parse_page</span><span class="s2">(</span><span class="s1">self</span><span class="s2">):</span>
+        <span class="s5">&quot;&quot;&quot;Парсит открытую страницу&quot;&quot;&quot;</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">check_stop_event</span><span class="s2">()</span>
+        <span class="s1">titles </span><span class="s2">= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">find_elements</span><span class="s2">(</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">TITLES</span><span class="s2">[</span><span class="s3">1</span><span class="s2">], </span><span class="s1">by</span><span class="s2">=</span><span class="s4">&quot;css selector&quot;</span><span class="s2">)</span>
+        <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">f&quot;Вижу объявления на странице&quot;</span><span class="s2">)</span>
+        <span class="s1">data_from_general_page </span><span class="s2">= []</span>
+        <span class="s0">for </span><span class="s1">title </span><span class="s0">in </span><span class="s1">titles</span><span class="s2">:</span>
+            <span class="s4">&quot;&quot;&quot;Сбор информации с основной страницы&quot;&quot;&quot;</span>
+            <span class="s0">try</span><span class="s2">:</span>
+                <span class="s1">name </span><span class="s2">= </span><span class="s1">title</span><span class="s2">.</span><span class="s1">find_element</span><span class="s2">(*</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">NAME</span><span class="s2">).</span><span class="s1">text</span>
+            <span class="s0">except </span><span class="s1">Exception</span><span class="s2">:  </span><span class="s6"># иногда это не объявление</span>
+                <span class="s0">continue</span>
+
+            <span class="s0">if </span><span class="s1">title</span><span class="s2">.</span><span class="s1">find_elements</span><span class="s2">(*</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">DESCRIPTIONS</span><span class="s2">):</span>
+                <span class="s0">try</span><span class="s2">:</span>
+                    <span class="s1">description </span><span class="s2">= </span><span class="s1">title</span><span class="s2">.</span><span class="s1">find_element</span><span class="s2">(*</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">DESCRIPTIONS</span><span class="s2">).</span><span class="s1">get_attribute</span><span class="s2">(</span><span class="s4">&quot;content&quot;</span><span class="s2">)</span>
+                <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">err</span><span class="s2">:</span>
+                    <span class="s1">logger</span><span class="s2">.</span><span class="s1">debug</span><span class="s2">(</span><span class="s4">f&quot;Ошибка при получении описания: </span><span class="s0">{</span><span class="s1">err</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+                    <span class="s1">description </span><span class="s2">= </span><span class="s4">''</span>
+            <span class="s0">else</span><span class="s2">:</span>
+                <span class="s1">description </span><span class="s2">= </span><span class="s4">''</span>
+
+            <span class="s1">url </span><span class="s2">= </span><span class="s1">title</span><span class="s2">.</span><span class="s1">find_element</span><span class="s2">(*</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">URL</span><span class="s2">).</span><span class="s1">get_attribute</span><span class="s2">(</span><span class="s4">&quot;href&quot;</span><span class="s2">)</span>
+            <span class="s1">price </span><span class="s2">= </span><span class="s1">title</span><span class="s2">.</span><span class="s1">find_element</span><span class="s2">(*</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">PRICE</span><span class="s2">).</span><span class="s1">get_attribute</span><span class="s2">(</span><span class="s4">&quot;content&quot;</span><span class="s2">)</span>
+            <span class="s1">ads_id </span><span class="s2">= </span><span class="s1">title</span><span class="s2">.</span><span class="s1">get_attribute</span><span class="s2">(</span><span class="s4">&quot;data-item-id&quot;</span><span class="s2">)</span>
+
+            <span class="s0">if </span><span class="s1">url </span><span class="s0">and not </span><span class="s1">ads_id</span><span class="s2">:</span>
+                <span class="s0">try</span><span class="s2">:</span>
+                    <span class="s1">regex </span><span class="s2">= </span><span class="s4">r&quot;_\d+$&quot;</span>
+                    <span class="s1">ids </span><span class="s2">= </span><span class="s1">re</span><span class="s2">.</span><span class="s1">findall</span><span class="s2">(</span><span class="s1">pattern</span><span class="s2">=</span><span class="s1">regex</span><span class="s2">, </span><span class="s1">string</span><span class="s2">=</span><span class="s1">url</span><span class="s2">)</span>
+                    <span class="s0">if </span><span class="s1">ids</span><span class="s2">:</span>
+                        <span class="s1">ads_id </span><span class="s2">= </span><span class="s1">url</span><span class="s2">[-</span><span class="s3">1</span><span class="s2">][:-</span><span class="s3">1</span><span class="s2">]</span>
+                    <span class="s0">continue</span>
+                <span class="s0">except </span><span class="s1">Exception</span><span class="s2">:</span>
+                    <span class="s0">continue</span>
+
+            <span class="s0">if not </span><span class="s1">ads_id</span><span class="s2">: </span><span class="s0">continue</span>
+
+            <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">is_viewed</span><span class="s2">(</span><span class="s1">ads_id</span><span class="s2">, </span><span class="s1">price</span><span class="s2">):</span>
+                <span class="s1">logger</span><span class="s2">.</span><span class="s1">debug</span><span class="s2">(</span><span class="s4">&quot;Пропускаю объявление. Уже видел его&quot;</span><span class="s2">)</span>
+                <span class="s0">continue</span>
+            <span class="s1">data </span><span class="s2">= {</span>
+                <span class="s4">'name'</span><span class="s2">: </span><span class="s1">name</span><span class="s2">,</span>
+                <span class="s4">'description'</span><span class="s2">: </span><span class="s1">description</span><span class="s2">,</span>
+                <span class="s4">'url'</span><span class="s2">: </span><span class="s1">url</span><span class="s2">,</span>
+                <span class="s4">'price'</span><span class="s2">: </span><span class="s1">price</span><span class="s2">,</span>
+                <span class="s4">'id'</span><span class="s2">: </span><span class="s1">ads_id</span>
+            <span class="s2">}</span>
+            <span class="s1">all_content </span><span class="s2">= </span><span class="s1">description</span><span class="s2">.</span><span class="s1">lower</span><span class="s2">() + </span><span class="s1">name</span><span class="s2">.</span><span class="s1">lower</span><span class="s2">()</span>
+            <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">min_price </span><span class="s2">&lt;= </span><span class="s1">int</span><span class="s2">(</span><span class="s1">price</span><span class="s2">) &lt;= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">max_price</span><span class="s2">:</span>
+                <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">keys_word </span><span class="s0">and </span><span class="s1">self</span><span class="s2">.</span><span class="s1">keys_black_word</span><span class="s2">:</span>
+                    <span class="s0">if </span><span class="s1">any</span><span class="s2">([</span><span class="s1">item</span><span class="s2">.</span><span class="s1">lower</span><span class="s2">() </span><span class="s0">in </span><span class="s1">all_content </span><span class="s0">for </span><span class="s1">item </span><span class="s0">in </span><span class="s1">self</span><span class="s2">.</span><span class="s1">keys_word</span><span class="s2">])</span><span class="s1">\</span>
+                            <span class="s0">and not </span><span class="s1">any</span><span class="s2">([</span><span class="s1">item</span><span class="s2">.</span><span class="s1">lower</span><span class="s2">() </span><span class="s0">in </span><span class="s1">all_content </span><span class="s0">for </span><span class="s1">item </span><span class="s0">in </span><span class="s1">self</span><span class="s2">.</span><span class="s1">keys_black_word</span><span class="s2">]):</span>
+                        <span class="s1">data_from_general_page</span><span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s1">data</span><span class="s2">)</span>
+                <span class="s0">elif </span><span class="s1">self</span><span class="s2">.</span><span class="s1">keys_black_word</span><span class="s2">:</span>
+                    <span class="s0">if not </span><span class="s1">any</span><span class="s2">([</span><span class="s1">item</span><span class="s2">.</span><span class="s1">lower</span><span class="s2">() </span><span class="s0">in </span><span class="s1">all_content </span><span class="s0">for </span><span class="s1">item </span><span class="s0">in </span><span class="s1">self</span><span class="s2">.</span><span class="s1">keys_black_word</span><span class="s2">]):</span>
+                        <span class="s1">data_from_general_page</span><span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s1">data</span><span class="s2">)</span>
+                <span class="s0">elif </span><span class="s1">self</span><span class="s2">.</span><span class="s1">keys_word</span><span class="s2">:</span>
+                    <span class="s0">if </span><span class="s1">any</span><span class="s2">([</span><span class="s1">item</span><span class="s2">.</span><span class="s1">lower</span><span class="s2">() </span><span class="s0">in </span><span class="s1">all_content </span><span class="s0">for </span><span class="s1">item </span><span class="s0">in </span><span class="s1">self</span><span class="s2">.</span><span class="s1">keys_word</span><span class="s2">]):</span>
+                        <span class="s1">data_from_general_page</span><span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s1">data</span><span class="s2">)</span>
+                <span class="s0">else</span><span class="s2">:</span>
+                    <span class="s1">data_from_general_page</span><span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s1">data</span><span class="s2">)</span>
+        <span class="s0">if </span><span class="s1">data_from_general_page</span><span class="s2">:</span>
+            <span class="s1">self</span><span class="s2">.</span><span class="s1">__parse_other_data</span><span class="s2">(</span><span class="s1">item_info_list</span><span class="s2">=</span><span class="s1">data_from_general_page</span><span class="s2">)</span>
+
+    <span class="s0">def </span><span class="s1">__parse_other_data</span><span class="s2">(</span><span class="s1">self</span><span class="s2">, </span><span class="s1">item_info_list</span><span class="s2">: </span><span class="s1">list</span><span class="s2">):</span>
+        <span class="s5">&quot;&quot;&quot;Собирает доп. информацию для каждого объявления&quot;&quot;&quot;</span>
+        <span class="s0">for </span><span class="s1">item_info </span><span class="s0">in </span><span class="s1">item_info_list</span><span class="s2">:</span>
+            <span class="s0">try</span><span class="s2">:</span>
+                <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">stop_event</span><span class="s2">.</span><span class="s1">is_set</span><span class="s2">():</span>
+                    <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;Процесс будет остановлен&quot;</span><span class="s2">)</span>
+                    <span class="s0">break</span>
+                <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">need_more_info</span><span class="s2">:</span>
+                    <span class="s1">item_info </span><span class="s2">= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">__parse_full_page</span><span class="s2">(</span><span class="s1">item_info</span><span class="s2">)</span>
+
+                <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">geo </span><span class="s0">and </span><span class="s1">item_info</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;geo&quot;</span><span class="s2">):  </span><span class="s6"># проверка гео</span>
+                    <span class="s0">if not </span><span class="s1">self</span><span class="s2">.</span><span class="s1">geo</span><span class="s2">.</span><span class="s1">lower</span><span class="s2">() </span><span class="s0">in </span><span class="s1">str</span><span class="s2">(</span><span class="s1">item_info</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;geo&quot;</span><span class="s2">)).</span><span class="s1">lower</span><span class="s2">():</span>
+                        <span class="s0">continue</span>
+
+                <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">max_views </span><span class="s0">and </span><span class="s1">self</span><span class="s2">.</span><span class="s1">max_views </span><span class="s2">!= </span><span class="s4">&quot;0&quot;</span><span class="s2">:</span>
+                    <span class="s0">if </span><span class="s1">int</span><span class="s2">(</span><span class="s1">self</span><span class="s2">.</span><span class="s1">max_views</span><span class="s2">) &lt;= </span><span class="s1">int</span><span class="s2">(</span><span class="s1">item_info</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;views&quot;</span><span class="s2">, </span><span class="s3">0</span><span class="s2">)):</span>
+                        <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;Количество просмотров больше заданного. Пропускаю объявление&quot;</span><span class="s2">)</span>
+                        <span class="s0">continue</span>
+
+                <span class="s1">self</span><span class="s2">.</span><span class="s1">__pretty_log</span><span class="s2">(</span><span class="s1">data</span><span class="s2">=</span><span class="s1">item_info</span><span class="s2">)</span>
+                <span class="s1">self</span><span class="s2">.</span><span class="s1">__save_data</span><span class="s2">(</span><span class="s1">data</span><span class="s2">=</span><span class="s1">item_info</span><span class="s2">)</span>
+            <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">err</span><span class="s2">:</span>
+                <span class="s1">logger</span><span class="s2">.</span><span class="s1">debug</span><span class="s2">(</span><span class="s1">err</span><span class="s2">)</span>
+
+    <span class="s2">@</span><span class="s1">staticmethod</span>
+    <span class="s0">def </span><span class="s1">__pretty_log</span><span class="s2">(</span><span class="s1">data</span><span class="s2">):</span>
+        <span class="s5">&quot;&quot;&quot;Красивый вывод для Telegram&quot;&quot;&quot;</span>
+        <span class="s1">price </span><span class="s2">= </span><span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;price&quot;</span><span class="s2">, </span><span class="s4">&quot;-&quot;</span><span class="s2">)</span>
+        <span class="s1">name </span><span class="s2">= </span><span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;name&quot;</span><span class="s2">, </span><span class="s4">&quot;-&quot;</span><span class="s2">)</span>
+        <span class="s1">id_ </span><span class="s2">= </span><span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;id&quot;</span><span class="s2">, </span><span class="s4">&quot;-&quot;</span><span class="s2">)</span>
+        <span class="s1">seller_name </span><span class="s2">= </span><span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;seller_name&quot;</span><span class="s2">)</span>
+        <span class="s1">short_url </span><span class="s2">= </span><span class="s4">f&quot;https://avito.ru/</span><span class="s0">{</span><span class="s1">id_</span><span class="s0">}</span><span class="s4">&quot;</span>
+        <span class="s1">message </span><span class="s2">= (</span>
+                <span class="s4">f&quot;</span><span class="s0">{</span><span class="s1">price</span><span class="s0">}\n{</span><span class="s1">name</span><span class="s0">}\n{</span><span class="s1">short_url</span><span class="s0">}\n</span><span class="s4">&quot;</span>
+                <span class="s2">+ (</span><span class="s4">f&quot;Продавец: </span><span class="s0">{</span><span class="s1">seller_name</span><span class="s0">}\n</span><span class="s4">&quot; </span><span class="s0">if </span><span class="s1">seller_name </span><span class="s0">else </span><span class="s4">&quot;&quot;</span><span class="s2">)</span>
+        <span class="s2">)</span>
+        <span class="s1">logger</span><span class="s2">.</span><span class="s1">success</span><span class="s2">(</span><span class="s1">message</span><span class="s2">)</span>
+
+    <span class="s0">def </span><span class="s1">__parse_full_page</span><span class="s2">(</span><span class="s1">self</span><span class="s2">, </span><span class="s1">data</span><span class="s2">: </span><span class="s1">dict</span><span class="s2">) </span><span class="s1">-&gt; dict</span><span class="s2">:</span>
+        <span class="s5">&quot;&quot;&quot;Парсит для доп. информации открытое объявление&quot;&quot;&quot;</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">uc_open</span><span class="s2">(</span><span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;url&quot;</span><span class="s2">))</span>
+        <span class="s0">if </span><span class="s4">&quot;Доступ ограничен&quot; </span><span class="s0">in </span><span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">get_title</span><span class="s2">():</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;Доступ ограничен: проблема с IP&quot;</span><span class="s2">)</span>
+            <span class="s1">self</span><span class="s2">.</span><span class="s1">ip_block</span><span class="s2">()</span>
+            <span class="s0">return </span><span class="s1">self</span><span class="s2">.</span><span class="s1">__parse_full_page</span><span class="s2">(</span><span class="s1">data</span><span class="s2">=</span><span class="s1">data</span><span class="s2">)</span>
+        <span class="s4">&quot;&quot;&quot;Если не дождались загрузки&quot;&quot;&quot;</span>
+        <span class="s0">try</span><span class="s2">:</span>
+            <span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">wait_for_element</span><span class="s2">(</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">TOTAL_VIEWS</span><span class="s2">[</span><span class="s3">1</span><span class="s2">], </span><span class="s1">by</span><span class="s2">=</span><span class="s4">&quot;css selector&quot;</span><span class="s2">, </span><span class="s1">timeout</span><span class="s2">=</span><span class="s3">10</span><span class="s2">)</span>
+        <span class="s0">except </span><span class="s1">Exception</span><span class="s2">:</span>
+            <span class="s4">&quot;&quot;&quot;Проверка на бан по ip&quot;&quot;&quot;</span>
+            <span class="s0">if </span><span class="s4">&quot;Доступ ограничен&quot; </span><span class="s0">in </span><span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">get_title</span><span class="s2">():</span>
+                <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;Доступ ограничен: проблема с IP&quot;</span><span class="s2">)</span>
+                <span class="s1">self</span><span class="s2">.</span><span class="s1">ip_block</span><span class="s2">()</span>
+                <span class="s0">return </span><span class="s1">self</span><span class="s2">.</span><span class="s1">__parse_full_page</span><span class="s2">(</span><span class="s1">data</span><span class="s2">=</span><span class="s1">data</span><span class="s2">)</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">debug</span><span class="s2">(</span><span class="s4">&quot;Не дождался загрузки страницы&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">data</span>
+
+        <span class="s4">&quot;&quot;&quot;Гео&quot;&quot;&quot;</span>
+        <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">find_elements</span><span class="s2">(</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">GEO</span><span class="s2">[</span><span class="s3">1</span><span class="s2">], </span><span class="s1">by</span><span class="s2">=</span><span class="s4">&quot;css selector&quot;</span><span class="s2">):</span>
+            <span class="s1">geo </span><span class="s2">= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">find_element</span><span class="s2">(</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">GEO</span><span class="s2">[</span><span class="s3">1</span><span class="s2">], </span><span class="s1">by</span><span class="s2">=</span><span class="s4">&quot;css selector&quot;</span><span class="s2">).</span><span class="s1">text</span>
+            <span class="s1">data</span><span class="s2">[</span><span class="s4">&quot;geo&quot;</span><span class="s2">] = </span><span class="s1">geo</span><span class="s2">.</span><span class="s1">lower</span><span class="s2">()</span>
+
+        <span class="s4">&quot;&quot;&quot;Количество просмотров&quot;&quot;&quot;</span>
+        <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">find_elements</span><span class="s2">(</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">TOTAL_VIEWS</span><span class="s2">[</span><span class="s3">1</span><span class="s2">], </span><span class="s1">by</span><span class="s2">=</span><span class="s4">&quot;css selector&quot;</span><span class="s2">):</span>
+            <span class="s1">total_views </span><span class="s2">= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">find_element</span><span class="s2">(</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">TOTAL_VIEWS</span><span class="s2">[</span><span class="s3">1</span><span class="s2">]).</span><span class="s1">text</span><span class="s2">.</span><span class="s1">split</span><span class="s2">()[</span><span class="s3">0</span><span class="s2">]</span>
+            <span class="s1">data</span><span class="s2">[</span><span class="s4">&quot;views&quot;</span><span class="s2">] = </span><span class="s1">total_views</span>
+
+        <span class="s4">&quot;&quot;&quot;Дата публикации&quot;&quot;&quot;</span>
+        <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">find_elements</span><span class="s2">(</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">DATE_PUBLIC</span><span class="s2">[</span><span class="s3">1</span><span class="s2">], </span><span class="s1">by</span><span class="s2">=</span><span class="s4">&quot;css selector&quot;</span><span class="s2">):</span>
+            <span class="s1">date_public </span><span class="s2">= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">find_element</span><span class="s2">(</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">DATE_PUBLIC</span><span class="s2">[</span><span class="s3">1</span><span class="s2">], </span><span class="s1">by</span><span class="s2">=</span><span class="s4">&quot;css selector&quot;</span><span class="s2">).</span><span class="s1">text</span>
+            <span class="s0">if </span><span class="s4">&quot;· &quot; </span><span class="s0">in </span><span class="s1">date_public</span><span class="s2">:</span>
+                <span class="s1">date_public </span><span class="s2">= </span><span class="s1">date_public</span><span class="s2">.</span><span class="s1">replace</span><span class="s2">(</span><span class="s4">&quot;· &quot;</span><span class="s2">, </span><span class="s4">''</span><span class="s2">)</span>
+            <span class="s1">data</span><span class="s2">[</span><span class="s4">&quot;date_public&quot;</span><span class="s2">] = </span><span class="s1">date_public</span>
+
+        <span class="s4">&quot;&quot;&quot;Имя продавца&quot;&quot;&quot;</span>
+        <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">find_elements</span><span class="s2">(</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">SELLER_NAME</span><span class="s2">[</span><span class="s3">1</span><span class="s2">], </span><span class="s1">by</span><span class="s2">=</span><span class="s4">&quot;css selector&quot;</span><span class="s2">):</span>
+            <span class="s1">seller_name </span><span class="s2">= </span><span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">.</span><span class="s1">find_element</span><span class="s2">(</span><span class="s1">LocatorAvito</span><span class="s2">.</span><span class="s1">SELLER_NAME</span><span class="s2">[</span><span class="s3">1</span><span class="s2">], </span><span class="s1">by</span><span class="s2">=</span><span class="s4">&quot;css selector&quot;</span><span class="s2">).</span><span class="s1">text</span>
+            <span class="s1">data</span><span class="s2">[</span><span class="s4">&quot;seller_name&quot;</span><span class="s2">] = </span><span class="s1">seller_name</span>
+
+        <span class="s0">return </span><span class="s1">data</span>
+
+    <span class="s0">def </span><span class="s1">is_viewed</span><span class="s2">(</span><span class="s1">self</span><span class="s2">, </span><span class="s1">ads_id</span><span class="s2">: </span><span class="s1">int</span><span class="s2">, </span><span class="s1">price</span><span class="s2">: </span><span class="s1">int</span><span class="s2">) </span><span class="s1">-&gt; bool</span><span class="s2">:</span>
+        <span class="s5">&quot;&quot;&quot;Проверяет, смотрели мы это или нет&quot;&quot;&quot;</span>
+        <span class="s0">return </span><span class="s1">self</span><span class="s2">.</span><span class="s1">db_handler</span><span class="s2">.</span><span class="s1">record_exists</span><span class="s2">(</span><span class="s1">ads_id</span><span class="s2">, </span><span class="s1">price</span><span class="s2">)</span>
+
+    <span class="s0">def </span><span class="s1">__save_data</span><span class="s2">(</span><span class="s1">self</span><span class="s2">, </span><span class="s1">data</span><span class="s2">: </span><span class="s1">dict</span><span class="s2">) </span><span class="s1">-&gt; </span><span class="s0">None</span><span class="s2">:</span>
+        <span class="s5">&quot;&quot;&quot;Сохраняет результат в файл keyword*.xlsx&quot;&quot;&quot;</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">xlsx_handler</span><span class="s2">.</span><span class="s1">append_data</span><span class="s2">(</span><span class="s1">data</span><span class="s2">=</span><span class="s1">data</span><span class="s2">)</span>
+
+        <span class="s4">&quot;&quot;&quot;сохраняет просмотренные объявления&quot;&quot;&quot;</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">db_handler</span><span class="s2">.</span><span class="s1">add_record</span><span class="s2">(</span><span class="s1">record_id</span><span class="s2">=</span><span class="s1">int</span><span class="s2">(</span><span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;id&quot;</span><span class="s2">)), </span><span class="s1">price</span><span class="s2">=</span><span class="s1">int</span><span class="s2">(</span><span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;price&quot;</span><span class="s2">)))</span>
+
+    <span class="s0">def </span><span class="s1">__get_file_title</span><span class="s2">(</span><span class="s1">self</span><span class="s2">) </span><span class="s1">-&gt; str</span><span class="s2">:</span>
+        <span class="s5">&quot;&quot;&quot;Определяет название файла&quot;&quot;&quot;</span>
+        <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">keys_word </span><span class="s0">not in </span><span class="s2">[</span><span class="s4">''</span><span class="s2">, </span><span class="s0">None</span><span class="s2">]:</span>
+            <span class="s1">title_file </span><span class="s2">= </span><span class="s4">&quot;-&quot;</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">list</span><span class="s2">(</span><span class="s1">map</span><span class="s2">(</span><span class="s1">str</span><span class="s2">.</span><span class="s1">lower</span><span class="s2">, </span><span class="s1">self</span><span class="s2">.</span><span class="s1">keys_word</span><span class="s2">)))</span>
+        <span class="s0">else</span><span class="s2">:</span>
+            <span class="s1">title_file </span><span class="s2">= </span><span class="s4">'all'</span>
+        <span class="s0">return </span><span class="s4">f&quot;result/</span><span class="s0">{</span><span class="s1">title_file</span><span class="s0">}</span><span class="s4">.xlsx&quot;</span>
+
+    <span class="s0">def </span><span class="s1">parse</span><span class="s2">(</span><span class="s1">self</span><span class="s2">):</span>
+        <span class="s5">&quot;&quot;&quot;Метод для вызова&quot;&quot;&quot;</span>
+        <span class="s0">for </span><span class="s1">_url </span><span class="s0">in </span><span class="s1">self</span><span class="s2">.</span><span class="s1">url_list</span><span class="s2">:</span>
+            <span class="s1">self</span><span class="s2">.</span><span class="s1">url </span><span class="s2">= </span><span class="s1">_url</span>
+            <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">stop_event </span><span class="s0">and </span><span class="s1">self</span><span class="s2">.</span><span class="s1">stop_event</span><span class="s2">.</span><span class="s1">is_set</span><span class="s2">():</span>
+                <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;Процесс будет остановлен&quot;</span><span class="s2">)</span>
+                <span class="s0">return</span>
+            <span class="s0">with </span><span class="s1">SB</span><span class="s2">(</span><span class="s1">uc</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+                    <span class="s1">headed</span><span class="s2">=</span><span class="s0">True if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">debug_mode </span><span class="s0">else False</span><span class="s2">,</span>
+                    <span class="s1">headless2</span><span class="s2">=</span><span class="s0">True if not </span><span class="s1">self</span><span class="s2">.</span><span class="s1">debug_mode </span><span class="s0">else False</span><span class="s2">,</span>
+                    <span class="s1">page_load_strategy</span><span class="s2">=</span><span class="s4">&quot;eager&quot;</span><span class="s2">,</span>
+                    <span class="s1">block_images</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+                    <span class="s1">agent</span><span class="s2">=</span><span class="s1">random</span><span class="s2">.</span><span class="s1">choice</span><span class="s2">(</span><span class="s1">open</span><span class="s2">(</span><span class="s4">&quot;user_agent_pc.txt&quot;</span><span class="s2">).</span><span class="s1">readlines</span><span class="s2">()),</span>
+                    <span class="s1">proxy</span><span class="s2">=</span><span class="s1">self</span><span class="s2">.</span><span class="s1">proxy</span><span class="s2">,</span>
+                    <span class="s1">sjw</span><span class="s2">=</span><span class="s0">True if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">fast_speed </span><span class="s0">else False</span><span class="s2">,</span>
+                    <span class="s2">) </span><span class="s0">as </span><span class="s1">self</span><span class="s2">.</span><span class="s1">driver</span><span class="s2">:</span>
+                <span class="s0">try</span><span class="s2">:</span>
+                    <span class="s1">self</span><span class="s2">.</span><span class="s1">__get_url</span><span class="s2">()</span>
+                    <span class="s1">self</span><span class="s2">.</span><span class="s1">__paginator</span><span class="s2">()</span>
+                <span class="s0">except </span><span class="s1">StopEventException</span><span class="s2">:</span>
+                    <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;Парсинг завершен&quot;</span><span class="s2">)</span>
+                    <span class="s0">return</span>
+                <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">err</span><span class="s2">:</span>
+                    <span class="s1">logger</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s4">f&quot;Ошибка: </span><span class="s0">{</span><span class="s1">err</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">stop_event</span><span class="s2">.</span><span class="s1">clear</span><span class="s2">()</span>
+        <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;Парсинг завершен&quot;</span><span class="s2">)</span>
+
+    <span class="s0">def </span><span class="s1">check_stop_event</span><span class="s2">(</span><span class="s1">self</span><span class="s2">):</span>
+        <span class="s0">if </span><span class="s1">self</span><span class="s2">.</span><span class="s1">stop_event</span><span class="s2">.</span><span class="s1">is_set</span><span class="s2">():</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;Процесс будет остановлен&quot;</span><span class="s2">)</span>
+            <span class="s0">raise </span><span class="s1">StopEventException</span><span class="s2">()</span>
+
+    <span class="s0">def </span><span class="s1">change_ip</span><span class="s2">(</span><span class="s1">self</span><span class="s2">) </span><span class="s1">-&gt; bool</span><span class="s2">:</span>
+        <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;Меняю IP&quot;</span><span class="s2">)</span>
+        <span class="s1">res </span><span class="s2">= </span><span class="s1">requests</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">url</span><span class="s2">=</span><span class="s1">self</span><span class="s2">.</span><span class="s1">proxy_change_url</span><span class="s2">)</span>
+        <span class="s0">if </span><span class="s1">res</span><span class="s2">.</span><span class="s1">status_code </span><span class="s2">== </span><span class="s3">200</span><span class="s2">:</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;IP изменен&quot;</span><span class="s2">)</span>
+            <span class="s0">return True</span>
+        <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;Не удалось изменить IP, пробую еще раз&quot;</span><span class="s2">)</span>
+        <span class="s1">time</span><span class="s2">.</span><span class="s1">sleep</span><span class="s2">(</span><span class="s3">10</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">self</span><span class="s2">.</span><span class="s1">change_ip</span><span class="s2">()</span>
+
+
+<span class="s0">if </span><span class="s1">__name__ </span><span class="s2">== </span><span class="s4">'__main__'</span><span class="s2">:</span>
+    <span class="s0">import </span><span class="s1">configparser</span>
+
+    <span class="s1">config </span><span class="s2">= </span><span class="s1">configparser</span><span class="s2">.</span><span class="s1">ConfigParser</span><span class="s2">()</span>
+    <span class="s1">config</span><span class="s2">.</span><span class="s1">read</span><span class="s2">(</span><span class="s4">&quot;settings.ini&quot;</span><span class="s2">, </span><span class="s1">encoding</span><span class="s2">=</span><span class="s4">&quot;utf-8&quot;</span><span class="s2">)</span>
+
+    <span class="s0">try</span><span class="s2">:</span>
+        <span class="s4">&quot;&quot;&quot;Багфикс проблем с экранированием&quot;&quot;&quot;</span>
+        <span class="s1">url </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">][</span><span class="s4">&quot;URL&quot;</span><span class="s2">].</span><span class="s1">split</span><span class="s2">(</span><span class="s4">&quot;,&quot;</span><span class="s2">)</span>
+    <span class="s0">except </span><span class="s1">Exception</span><span class="s2">:</span>
+        <span class="s0">with </span><span class="s1">open</span><span class="s2">(</span><span class="s4">'settings.ini'</span><span class="s2">, </span><span class="s1">encoding</span><span class="s2">=</span><span class="s4">&quot;utf-8&quot;</span><span class="s2">) </span><span class="s0">as </span><span class="s1">file</span><span class="s2">:</span>
+            <span class="s1">line_url </span><span class="s2">= </span><span class="s1">file</span><span class="s2">.</span><span class="s1">readlines</span><span class="s2">()[</span><span class="s3">1</span><span class="s2">]</span>
+            <span class="s1">regex </span><span class="s2">= </span><span class="s4">r&quot;http.+&quot;</span>
+            <span class="s1">url </span><span class="s2">= </span><span class="s1">re</span><span class="s2">.</span><span class="s1">findall</span><span class="s2">(</span><span class="s1">regex</span><span class="s2">, </span><span class="s1">line_url</span><span class="s2">)</span>
+
+    <span class="s1">chat_ids </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">][</span><span class="s4">&quot;CHAT_ID&quot;</span><span class="s2">].</span><span class="s1">split</span><span class="s2">(</span><span class="s4">&quot;,&quot;</span><span class="s2">)</span>
+    <span class="s1">token </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">][</span><span class="s4">&quot;TG_TOKEN&quot;</span><span class="s2">]</span>
+    <span class="s1">num_ads </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">][</span><span class="s4">&quot;NUM_ADS&quot;</span><span class="s2">]</span>
+    <span class="s1">max_view </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;MAX_VIEW&quot;</span><span class="s2">)</span>
+    <span class="s1">freq </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">][</span><span class="s4">&quot;FREQ&quot;</span><span class="s2">]</span>
+    <span class="s1">keys </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">][</span><span class="s4">&quot;KEYS&quot;</span><span class="s2">].</span><span class="s1">split</span><span class="s2">(</span><span class="s4">&quot;,&quot;</span><span class="s2">)</span>
+    <span class="s1">keys_black </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;KEYS_BLACK&quot;</span><span class="s2">, </span><span class="s4">&quot;&quot;</span><span class="s2">).</span><span class="s1">split</span><span class="s2">(</span><span class="s4">&quot;,&quot;</span><span class="s2">)</span>
+    <span class="s1">max_price </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;MAX_PRICE&quot;</span><span class="s2">, </span><span class="s4">&quot;9999999999&quot;</span><span class="s2">) </span><span class="s0">or </span><span class="s4">&quot;9999999999&quot;</span>
+    <span class="s1">min_price </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;MIN_PRICE&quot;</span><span class="s2">, </span><span class="s4">&quot;0&quot;</span><span class="s2">) </span><span class="s0">or </span><span class="s4">&quot;0&quot;</span>
+    <span class="s1">geo </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;GEO&quot;</span><span class="s2">, </span><span class="s4">&quot;&quot;</span><span class="s2">) </span><span class="s0">or </span><span class="s4">&quot;&quot;</span>
+    <span class="s1">proxy </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;PROXY&quot;</span><span class="s2">, </span><span class="s4">&quot;&quot;</span><span class="s2">)</span>
+    <span class="s1">proxy_change_ip </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;PROXY_CHANGE_IP&quot;</span><span class="s2">, </span><span class="s4">&quot;&quot;</span><span class="s2">)</span>
+    <span class="s1">need_more_info </span><span class="s2">= </span><span class="s1">int</span><span class="s2">(</span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">][</span><span class="s4">&quot;NEED_MORE_INFO&quot;</span><span class="s2">])</span>
+    <span class="s1">fast_speed </span><span class="s2">= </span><span class="s1">int</span><span class="s2">(</span><span class="s1">config</span><span class="s2">[</span><span class="s4">&quot;Avito&quot;</span><span class="s2">][</span><span class="s4">&quot;NEED_MORE_INFO&quot;</span><span class="s2">])</span>
+
+    <span class="s0">if </span><span class="s1">token </span><span class="s0">and </span><span class="s1">chat_ids</span><span class="s2">:</span>
+        <span class="s0">for </span><span class="s1">chat_id </span><span class="s0">in </span><span class="s1">chat_ids</span><span class="s2">:</span>
+            <span class="s1">params </span><span class="s2">= {</span>
+                <span class="s4">'token'</span><span class="s2">: </span><span class="s1">token</span><span class="s2">,</span>
+                <span class="s4">'chat_id'</span><span class="s2">: </span><span class="s1">chat_id</span>
+            <span class="s2">}</span>
+            <span class="s1">tg_handler </span><span class="s2">= </span><span class="s1">NotificationHandler</span><span class="s2">(</span><span class="s4">&quot;telegram&quot;</span><span class="s2">, </span><span class="s1">defaults</span><span class="s2">=</span><span class="s1">params</span><span class="s2">)</span>
+
+            <span class="s4">&quot;&quot;&quot;Все логи уровня SUCCESS и выше отсылаются в телегу&quot;&quot;&quot;</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">tg_handler</span><span class="s2">, </span><span class="s1">level</span><span class="s2">=</span><span class="s4">&quot;SUCCESS&quot;</span><span class="s2">, </span><span class="s1">format</span><span class="s2">=</span><span class="s4">&quot;{message}&quot;</span><span class="s2">)</span>
+
+    <span class="s0">while True</span><span class="s2">:</span>
+        <span class="s0">try</span><span class="s2">:</span>
+            <span class="s1">AvitoParse</span><span class="s2">(</span>
+                <span class="s1">url</span><span class="s2">=</span><span class="s1">url</span><span class="s2">,</span>
+                <span class="s1">count</span><span class="s2">=</span><span class="s1">int</span><span class="s2">(</span><span class="s1">num_ads</span><span class="s2">),</span>
+                <span class="s1">keysword_list</span><span class="s2">=</span><span class="s1">keys </span><span class="s0">if </span><span class="s1">keys </span><span class="s0">not in </span><span class="s2">([</span><span class="s4">''</span><span class="s2">], </span><span class="s0">None</span><span class="s2">) </span><span class="s0">else None</span><span class="s2">,</span>
+                <span class="s1">keysword_black_list</span><span class="s2">=</span><span class="s1">keys_black </span><span class="s0">if </span><span class="s1">keys_black </span><span class="s0">not in </span><span class="s2">([</span><span class="s4">''</span><span class="s2">], </span><span class="s0">None</span><span class="s2">) </span><span class="s0">else None</span><span class="s2">,</span>
+                <span class="s1">max_price</span><span class="s2">=</span><span class="s1">int</span><span class="s2">(</span><span class="s1">max_price</span><span class="s2">),</span>
+                <span class="s1">min_price</span><span class="s2">=</span><span class="s1">int</span><span class="s2">(</span><span class="s1">min_price</span><span class="s2">),</span>
+                <span class="s1">geo</span><span class="s2">=</span><span class="s1">geo</span><span class="s2">,</span>
+                <span class="s1">need_more_info</span><span class="s2">=</span><span class="s3">1 </span><span class="s0">if </span><span class="s1">need_more_info </span><span class="s0">else </span><span class="s3">0</span><span class="s2">,</span>
+                <span class="s1">proxy</span><span class="s2">=</span><span class="s1">proxy</span><span class="s2">,</span>
+                <span class="s1">proxy_change_url</span><span class="s2">=</span><span class="s1">proxy_change_ip</span><span class="s2">,</span>
+                <span class="s1">max_views</span><span class="s2">=</span><span class="s1">int</span><span class="s2">(</span><span class="s1">max_view</span><span class="s2">) </span><span class="s0">if </span><span class="s1">max_view </span><span class="s0">else None</span><span class="s2">,</span>
+                <span class="s1">fast_speed</span><span class="s2">=</span><span class="s3">1 </span><span class="s0">if </span><span class="s1">fast_speed </span><span class="s0">else </span><span class="s3">0</span>
+            <span class="s2">).</span><span class="s1">parse</span><span class="s2">()</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">&quot;Пауза&quot;</span><span class="s2">)</span>
+            <span class="s1">time</span><span class="s2">.</span><span class="s1">sleep</span><span class="s2">(</span><span class="s1">int</span><span class="s2">(</span><span class="s1">freq</span><span class="s2">))</span>
+        <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">error</span><span class="s2">:</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">debug</span><span class="s2">(</span><span class="s1">error</span><span class="s2">)</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">debug</span><span class="s2">(</span><span class="s4">'Произошла ошибка, но работа будет продолжена через 30 сек. '</span>
+                         <span class="s4">'Если ошибка повторится несколько раз - перезапустите скрипт.'</span>
+                         <span class="s4">'Если и это не поможет - значит что-то сломалось'</span><span class="s2">)</span>
+            <span class="s1">time</span><span class="s2">.</span><span class="s1">sleep</span><span class="s2">(</span><span class="s3">30</span><span class="s2">)</span></pre>
+</body>
+</html>

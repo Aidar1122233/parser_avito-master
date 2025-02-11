@@ -1,0 +1,39 @@
+<html>
+<head>
+<title>entrypoint.sh</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4; font-weight: bold;}
+.s1 { color: #bcbec4;}
+.s2 { color: #6aab73;}
+.s3 { color: #bcbec4;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+entrypoint.sh</font>
+</center></td></tr></table>
+<pre><span class="s0">#!/bin/sh</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|url = .*|url = </span><span class="s3">$URL_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|chat_id=.*|chat_id= </span><span class="s3">$CHAT_ID_TG</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|tg_token = .*|tg_token = </span><span class="s3">$TG_TOKEN</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|num_ads = .*|num_ads = </span><span class="s3">$NUM_ADS_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|freq = .*|freq = </span><span class="s3">$FREQ_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|keys = .*|keys = </span><span class="s3">$KEYS_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|keys_blacks = .*|keys_blacks = </span><span class="s3">$KEYS_BLACKS_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|max_price = .*|max_price = </span><span class="s3">$MAX_PRICE_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|min_price = .*|min_price = </span><span class="s3">$MIN_PRICE_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|geo = .*|geo = </span><span class="s3">$GEO_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|proxy = .*|proxy = </span><span class="s3">$PROXY_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|proxy_change_ip = .*|proxy_change_ip = </span><span class="s3">$PROXY_CHANGE_IP_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|need_more_info = .*|need_more_info = </span><span class="s3">$NEED_MORE_INFO_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|debug_mode = .*|debug_mode = </span><span class="s3">$DEBUG_MODE_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|fast_speed = .*|fast_speed = </span><span class="s3">$FAST_SPEED_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|max_view = .*|max_view = </span><span class="s3">$MAX_VIEW_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">sed -i </span><span class="s2">&quot;s|keys_black = .*|keys_black = </span><span class="s3">$KEYS_BLACK_AVITO</span><span class="s2">|1&quot; </span><span class="s1">settings.ini</span>
+<span class="s1">python parser_cls.py</span>
+</pre>
+</body>
+</html>

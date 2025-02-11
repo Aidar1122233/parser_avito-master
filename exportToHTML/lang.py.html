@@ -1,0 +1,61 @@
+<html>
+<head>
+<title>lang.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #bcbec4;}
+.s2 { color: #6aab73;}
+.s3 { color: #cf8e6d;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+lang.py</font>
+</center></td></tr></table>
+<pre><span class="s0">URL_INPUT_HELP </span><span class="s1">= </span><span class="s2">&quot;Вы можете вставить до 50 ссылок. Все настройки будут общие для каждой ссылки</span><span class="s3">\n</span><span class="s2">Ссылки будут&quot; </span><span class="s0">\</span>
+                 <span class="s2">&quot; обработаны в указанном порядке.</span><span class="s3">\n</span><span class="s2">Все параметры вшитые в ссылку будут работать&quot;</span>
+<span class="s0">MIN_PRICE_HELP </span><span class="s1">= </span><span class="s2">&quot;Минимальная цена. Если это неважно - ставьте 0&quot;</span>
+<span class="s0">MAX_PRICE_HELP </span><span class="s1">= </span><span class="s2">&quot;Максимальная цена. Если это неважно - ставьте 999999999999&quot;</span>
+<span class="s0">KEYWORD_INPUT_HELP </span><span class="s1">= </span><span class="s2">&quot;В названии или описании объявления обязательно должно встретиться одно из ключевых слов&quot;</span>
+<span class="s0">KEYWORD_BLACK_INPUT_HELP </span><span class="s1">= </span><span class="s2">&quot;Если в названии или описании объявления будет одно из этих слов - объявление &quot; </span><span class="s0">\</span>
+                           <span class="s2">&quot;будет проигнорировано&quot;</span>
+<span class="s0">COUNT_PAGE_HELP </span><span class="s1">= </span><span class="s2">&quot;Сколько страниц обрабатывать для каждой ссылки?&quot;</span>
+<span class="s0">PAUSE_SEC_HELP </span><span class="s1">= </span><span class="s2">&quot;Пауза в секундах между повторной проверкой&quot;</span>
+<span class="s0">MAX_VIEW_HELP </span><span class="s1">= </span><span class="s2">&quot;Если у объявления будет больше просмотров чем указано - то объявление будет проигнорировано. &quot; </span><span class="s0">\</span>
+                <span class="s2">&quot;Если что-то ввести - придется включить режим /Дополнительная информация/. Это удобно использовать, &quot; </span><span class="s0">\</span>
+                <span class="s2">&quot;чтобы отсеять старые объявления при первом запуске. Оставь здесь 0 или очисти поле - &quot; </span><span class="s0">\</span>
+                <span class="s2">&quot;если на просмотры всё равно&quot;</span>
+<span class="s0">TG_TOKEN_HELP </span><span class="s1">= </span><span class="s2">&quot;Токен телеги, выдаётся при создании телеграм-канала&quot;</span>
+<span class="s0">TG_CHAT_ID_HELP </span><span class="s1">= </span><span class="s2">&quot;Chat_id - id конкретно Вашей беседы, можно вставить несколько&quot;</span>
+<span class="s0">BTN_TEST_TG_HELP </span><span class="s1">= </span><span class="s2">&quot;Если нужно проверить правильность введенных данных&quot;</span>
+<span class="s0">PROXY_HELP </span><span class="s1">= </span><span class="s2">&quot;Прокси вот в таком формате username:password@server:port. Чтобы узнать больше кликни кнопку ниже&quot;</span>
+<span class="s0">PROXY_CHANGE_IP_HELP </span><span class="s1">= </span><span class="s2">&quot;Ссылка на изменения ip прокси&quot;</span>
+<span class="s0">PROXY_BTN_HELP_HELP </span><span class="s1">= </span><span class="s2">&quot;Жми не бойся&quot;</span>
+<span class="s0">GEO_HELP </span><span class="s1">= </span><span class="s2">&quot;Если нужно фильтровать объявления по гео признаку. Проверяет есть ли введенное значение в строке адреса &quot; </span><span class="s0">\</span>
+           <span class="s2">&quot;найденного объявления. Если что-то ввести - придется включить режим /Дополнительная информация/&quot;</span>
+<span class="s0">NEED_MORE_INFO_HELP </span><span class="s1">= </span><span class="s2">&quot;Если Вам нужны такие вещи как: адрес, полное описание, продавец, кол-во просмотров,&quot; </span><span class="s0">\</span>
+                      <span class="s2">&quot; дата размещения то придется включить это. </span><span class="s3">\n</span><span class="s2">Это увеличивает вероятность блокировки&quot; </span><span class="s0">\</span>
+                      <span class="s2">&quot;и снижает скорость, поэтому без прокси лучше не использовать. &quot; </span><span class="s0">\</span>
+                      <span class="s2">&quot;</span><span class="s3">\n</span><span class="s2">Если заполнены поля /Гео/ или /Макс. просмотров/ - это поле будет обязательно&quot;</span>
+<span class="s0">DEBUG_MODE_HELP </span><span class="s1">= </span><span class="s2">&quot;Будет видно окно браузера и можно посмотреть, что там происходит. Иногда полезно чтобы понять&quot; </span><span class="s0">\</span>
+                  <span class="s2">&quot; почему ничего не работает&quot;</span>
+<span class="s0">SKIP_JS_HELP </span><span class="s1">= </span><span class="s2">&quot;Если включено - скрипт не будет ждать полной загрузки страницы, а именно выполнения js кода.</span><span class="s3">\n</span><span class="s2">&quot; </span><span class="s0">\</span>
+               <span class="s2">&quot;Это сильно ускорит всю работу, но баны по IP будут чаще. Без прокси лучше не включать&quot;</span>
+<span class="s0">BUY_ME_COFFE_BTN_HELP </span><span class="s1">= </span><span class="s2">&quot;Я старался написать полезную и при этом бесплатную программу (и даже этот текст). Если&quot; </span><span class="s0">\</span>
+                        <span class="s2">&quot; можешь поддержать - буду только рад&quot;</span>
+<span class="s0">REPORT_ISSUE_BTN_HELP </span><span class="s1">= </span><span class="s2">&quot;Сообщить об ошибке&quot;</span>
+<span class="s0">BUY_PROXY_LINK </span><span class="s1">= </span><span class="s2">&quot;Для стабильной работы парсера необходимы мобильные прокси, которые обеспечат доступ к практически&quot; </span><span class="s0">\</span>
+                 <span class="s2">&quot; неограниченному числу IP-адресов. </span><span class="s3">\n</span><span class="s2">Вы можете использовать любые мобильные прокси (наверное)), &quot; </span><span class="s0">\</span>
+                 <span class="s2">&quot;но я рекомендую обратить внимание на mobileproxy, тестирование парсера проводилось именно на них.&quot; </span><span class="s0">\</span>
+                 <span class="s2">&quot; </span><span class="s3">\n</span><span class="s2">После нажатия кнопки «Купить прокси» Вы попадёте на их сайт, где сможете приобрести прокси со &quot; </span><span class="s0">\</span>
+                 <span class="s2">&quot;скидкой 20% (скидка применится автоматически). </span><span class="s3">\n</span><span class="s2">При покупке выберите регион 'Россия'</span><span class="s3">\n </span><span class="s2">PS: &quot; </span><span class="s0">\</span>
+                 <span class="s2">&quot;Нужен всего один! мобильный прокси &quot;</span>
+<span class="s0">TG_TEST_MSG </span><span class="s1">= </span><span class="s2">&quot;Если сообщение пришло к Вам в telegram - значит всё настроено правильно. Если нет - результат парсинга&quot; </span><span class="s0">\</span>
+              <span class="s2">&quot; всегда можно посмотреть в папке result или ниже. Если Вы сейчас измените token или chat_id -&quot; </span><span class="s0">\</span>
+              <span class="s2">&quot; перезапустите парсер&quot;</span>
+</pre>
+</body>
+</html>

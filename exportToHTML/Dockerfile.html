@@ -1,0 +1,104 @@
+<html>
+<head>
+<title>Dockerfile</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #2aacb8;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #bcbec4;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+Dockerfile</font>
+</center></td></tr></table>
+<pre><span class="s0">FROM </span><span class="s1">python:</span><span class="s2">3 </span><span class="s1">AS build</span>
+
+<span class="s0">LABEL </span><span class="s1">developer=</span><span class="s3">&quot;Duff89&quot;</span>
+<span class="s0">LABEL </span><span class="s1">maintainer=</span><span class="s3">&quot;armrus.org&quot;</span>
+
+<span class="s4"># Installing required build packages</span>
+<span class="s0">RUN </span><span class="s1">set </span><span class="s0">-</span><span class="s1">ex </span><span class="s0">&amp;&amp; </span><span class="s1">\ 
+    apt-get update </span><span class="s0">&amp;&amp; </span><span class="s1">\ 
+    apt-get autoremove </span><span class="s0">-</span><span class="s1">y </span><span class="s0">&amp;&amp; </span><span class="s1">\ 
+    rm </span><span class="s0">-</span><span class="s1">rf </span><span class="s0">/</span><span class="s1">var</span><span class="s0">/</span><span class="s1">lib</span><span class="s0">/</span><span class="s1">apt</span><span class="s0">/</span><span class="s1">lists</span><span class="s0">/*</span>
+
+<span class="s4"># Set timezone</span>
+<span class="s0">ENV </span><span class="s1">TZ=</span><span class="s3">&quot;Europe/Moscow&quot;</span>
+<span class="s0">RUN </span><span class="s1">ln </span><span class="s0">-</span><span class="s1">snf </span><span class="s0">/</span><span class="s1">usr</span><span class="s0">/</span><span class="s1">share</span><span class="s0">/</span><span class="s1">zoneinfo</span><span class="s0">/</span><span class="s1">$TZ </span><span class="s0">/</span><span class="s1">etc</span><span class="s0">/</span><span class="s1">localtime </span><span class="s0">&amp;&amp; </span><span class="s1">\ 
+    echo $TZ </span><span class="s0">&gt; /</span><span class="s1">etc</span><span class="s0">/</span><span class="s1">timezone</span>
+
+<span class="s0">ENV </span><span class="s1">PATH=</span><span class="s3">&quot;/usr/local/bin:</span><span class="s1">$PATH</span><span class="s3">&quot;</span>
+<span class="s0">ENV </span><span class="s1">LANG=</span><span class="s3">&quot;C.UTF-8&quot;</span>
+
+<span class="s0">COPY </span><span class="s1">requirements</span><span class="s5">.</span><span class="s1">txt </span><span class="s0">/</span><span class="s1">parse_avito</span><span class="s0">/</span><span class="s1">requirements</span><span class="s5">.</span><span class="s1">txt</span>
+<span class="s4"># COPY AvitoParser.py /parse_avito/AvitoParser.py</span>
+<span class="s0">COPY </span><span class="s1">custom_exception</span><span class="s5">.</span><span class="s1">py </span><span class="s0">/</span><span class="s1">parse_avito</span><span class="s0">/</span><span class="s1">custom_exception</span><span class="s5">.</span><span class="s1">py</span>
+<span class="s0">COPY </span><span class="s1">db_service</span><span class="s5">.</span><span class="s1">py </span><span class="s0">/</span><span class="s1">parse_avito</span><span class="s0">/</span><span class="s1">db_service</span><span class="s5">.</span><span class="s1">py</span>
+<span class="s0">COPY </span><span class="s1">lang</span><span class="s5">.</span><span class="s1">py </span><span class="s0">/</span><span class="s1">parse_avito</span><span class="s0">/</span><span class="s1">lang</span><span class="s5">.</span><span class="s1">py</span>
+<span class="s0">COPY </span><span class="s1">locator</span><span class="s5">.</span><span class="s1">py </span><span class="s0">/</span><span class="s1">parse_avito</span><span class="s0">/</span><span class="s1">locator</span><span class="s5">.</span><span class="s1">py</span>
+<span class="s0">COPY </span><span class="s1">parser_cls</span><span class="s5">.</span><span class="s1">py </span><span class="s0">/</span><span class="s1">parse_avito</span><span class="s0">/</span><span class="s1">parser_cls</span><span class="s5">.</span><span class="s1">py</span>
+<span class="s0">COPY </span><span class="s1">settings</span><span class="s5">.</span><span class="s1">ini </span><span class="s0">/</span><span class="s1">parse_avito</span><span class="s0">/</span><span class="s1">settings</span><span class="s5">.</span><span class="s1">ini</span>
+<span class="s0">COPY </span><span class="s1">user_agent_pc</span><span class="s5">.</span><span class="s1">txt </span><span class="s0">/</span><span class="s1">parse_avito</span><span class="s0">/</span><span class="s1">user_agent_pc</span><span class="s5">.</span><span class="s1">txt</span>
+<span class="s0">COPY </span><span class="s1">xlsx_service</span><span class="s5">.</span><span class="s1">py </span><span class="s0">/</span><span class="s1">parse_avito</span><span class="s0">/</span><span class="s1">xlsx_service</span><span class="s5">.</span><span class="s1">py</span>
+<span class="s0">COPY </span><span class="s1">entrypoint</span><span class="s5">.</span><span class="s1">sh </span><span class="s0">/</span><span class="s1">parse_avito</span><span class="s0">/</span><span class="s1">entrypoint</span><span class="s5">.</span><span class="s1">sh</span>
+<span class="s0">RUN </span><span class="s1">chmod </span><span class="s0">+</span><span class="s1">x </span><span class="s0">/</span><span class="s1">parse_avito</span><span class="s0">/</span><span class="s1">entrypoint</span><span class="s5">.</span><span class="s1">sh</span>
+
+<span class="s4"># будем собирать из параметров для создания контейнера</span>
+<span class="s0">ENV </span><span class="s1">URL_AVITO=</span><span class="s3">&quot;https://www.avito.ru/sankt-peterburg/tovary_dlya_kompyutera?cd=1&amp;q=%%D0%%B2%%D0%%B8%%D0%%B4%%D0%%B5%%D0%%BE%%D0%%BA%%D0%%B0%%D1%%80%%D1%%82%%D0%%B0+rtx&quot;</span>
+<span class="s0">ENV </span><span class="s1">CHAT_ID_TG=</span><span class="s2">0</span>
+<span class="s0">ENV </span><span class="s1">TG_TOKEN=</span><span class="s3">&quot;&quot;</span>
+<span class="s0">ENV </span><span class="s1">NUM_ADS_AVITO=</span><span class="s2">3</span>
+<span class="s0">ENV </span><span class="s1">FREQ_AVITO=</span><span class="s2">60</span>
+<span class="s0">ENV </span><span class="s1">KEYS_AVITO=</span><span class="s3">&quot;&quot;</span>
+<span class="s0">ENV </span><span class="s1">KEYS_BLACKS_AVITO=</span><span class="s3">&quot;&quot;</span>
+<span class="s0">ENV </span><span class="s1">MAX_PRICE_AVITO=</span><span class="s2">200000000</span>
+<span class="s0">ENV </span><span class="s1">MIN_PRICE_AVITO=</span><span class="s2">0</span>
+<span class="s0">ENV </span><span class="s1">GEO_AVITO=</span><span class="s3">&quot;&quot;</span>
+<span class="s0">ENV </span><span class="s1">PROXY_AVITO=</span><span class="s3">&quot;&quot;</span>
+<span class="s0">ENV </span><span class="s1">PROXY_CHANGE_IP_AVITO=</span><span class="s3">&quot;&quot;</span>
+<span class="s0">ENV </span><span class="s1">NEED_MORE_INFO_AVITO=</span><span class="s2">1</span>
+<span class="s0">ENV </span><span class="s1">DEBUG_MODE_AVITO=</span><span class="s2">1</span>
+<span class="s0">ENV </span><span class="s1">FAST_SPEED_AVITO=</span><span class="s2">1</span>
+<span class="s0">ENV </span><span class="s1">MAX_VIEW_AVITO=</span><span class="s2">0</span>
+<span class="s0">ENV </span><span class="s1">KEYS_BLACK_AVITO=</span><span class="s3">&quot;&quot;</span>
+
+
+<span class="s0">WORKDIR /</span><span class="s1">parse_avito</span>
+<span class="s0">RUN </span><span class="s1">pip install </span><span class="s0">-</span><span class="s1">r requirements</span><span class="s5">.</span><span class="s1">txt</span>
+<span class="s0">RUN </span><span class="s1">apt-get update </span><span class="s0">&amp;&amp; </span><span class="s1">apt-get install </span><span class="s0">-</span><span class="s1">y \ 
+    fonts-liberation \ 
+    libasound2 \ 
+    libatk-bridge2</span><span class="s2">.0</span><span class="s0">-</span><span class="s2">0 </span><span class="s1">\ 
+    libatk1</span><span class="s2">.0</span><span class="s0">-</span><span class="s2">0 </span><span class="s1">\ 
+    libatspi2</span><span class="s2">.0</span><span class="s0">-</span><span class="s2">0 </span><span class="s1">\ 
+    libcups2 \ 
+    libdbus-1-3 \ 
+    libdrm2 \ 
+    libgbm1 \ 
+    libgtk-3-0 \ 
+</span><span class="s4">#    libgtk-4-1 \</span>
+    <span class="s1">libnspr4 \ 
+    libnss3 \ 
+    libwayland-client0 \ 
+    libxcomposite1 \ 
+    libxdamage1 \ 
+    libxfixes3 \ 
+    libxkbcommon0 \ 
+    libxrandr2 \ 
+    xdg-utils \ 
+    libu2f-udev \ 
+    libvulkan1</span>
+<span class="s0">RUN </span><span class="s1">wget https:</span><span class="s0">//</span><span class="s1">dl</span><span class="s5">.</span><span class="s1">google</span><span class="s5">.</span><span class="s1">com</span><span class="s0">/</span><span class="s1">linux</span><span class="s0">/</span><span class="s1">direct</span><span class="s0">/</span><span class="s1">google-chrome-stable_current_amd64</span><span class="s5">.</span><span class="s1">deb</span>
+<span class="s0">RUN </span><span class="s1">dpkg </span><span class="s0">-</span><span class="s1">i </span><span class="s0">--</span><span class="s1">force-depends google-chrome-stable_current_amd64</span><span class="s5">.</span><span class="s1">deb</span>
+<span class="s0">RUN </span><span class="s1">apt </span><span class="s0">--</span><span class="s1">fix-broken install</span>
+<span class="s4"># ENTRYPOINT [&quot;python&quot;, &quot;./parser_cls.py&quot;]</span>
+<span class="s0">ENTRYPOINT </span><span class="s5">[</span><span class="s3">&quot;sh&quot;</span><span class="s5">, </span><span class="s3">&quot;entrypoint.sh&quot;</span><span class="s5">]</span>
+</pre>
+</body>
+</html>

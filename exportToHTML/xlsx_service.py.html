@@ -1,0 +1,70 @@
+<html>
+<head>
+<title>xlsx_service.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #5f826b; font-style: italic;}
+.s4 { color: #6aab73;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+xlsx_service.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">os</span>
+<span class="s0">from </span><span class="s1">openpyxl </span><span class="s0">import </span><span class="s1">Workbook</span><span class="s2">, </span><span class="s1">load_workbook</span>
+<span class="s0">from </span><span class="s1">threading </span><span class="s0">import </span><span class="s1">Lock</span>
+
+
+<span class="s0">class </span><span class="s1">XLSXHandler</span><span class="s2">:</span>
+    <span class="s3">&quot;&quot;&quot;Сохраняет информацию в xlsx&quot;&quot;&quot;</span>
+    <span class="s1">_instance </span><span class="s2">= </span><span class="s0">None</span>
+    <span class="s1">_lock </span><span class="s2">= </span><span class="s1">Lock</span><span class="s2">()</span>
+
+    <span class="s0">def </span><span class="s1">__new__</span><span class="s2">(</span><span class="s1">cls</span><span class="s2">, </span><span class="s1">file_name</span><span class="s2">):</span>
+        <span class="s0">with </span><span class="s1">cls</span><span class="s2">.</span><span class="s1">_lock</span><span class="s2">:</span>
+            <span class="s0">if </span><span class="s1">cls</span><span class="s2">.</span><span class="s1">_instance </span><span class="s0">is None</span><span class="s2">:</span>
+                <span class="s1">cls</span><span class="s2">.</span><span class="s1">_instance </span><span class="s2">= </span><span class="s1">super</span><span class="s2">(</span><span class="s1">XLSXHandler</span><span class="s2">, </span><span class="s1">cls</span><span class="s2">).</span><span class="s1">__new__</span><span class="s2">(</span><span class="s1">cls</span><span class="s2">)</span>
+                <span class="s1">cls</span><span class="s2">.</span><span class="s1">_instance</span><span class="s2">.</span><span class="s1">_initialize</span><span class="s2">(</span><span class="s1">file_name</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">cls</span><span class="s2">.</span><span class="s1">_instance</span>
+
+    <span class="s0">def </span><span class="s1">_initialize</span><span class="s2">(</span><span class="s1">self</span><span class="s2">, </span><span class="s1">file_name</span><span class="s2">):</span>
+        <span class="s1">self</span><span class="s2">.</span><span class="s1">file_name </span><span class="s2">= </span><span class="s1">file_name</span>
+        <span class="s1">os</span><span class="s2">.</span><span class="s1">makedirs</span><span class="s2">(</span><span class="s4">&quot;result&quot;</span><span class="s2">, </span><span class="s1">exist_ok</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+        <span class="s0">if not </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">exists</span><span class="s2">(</span><span class="s1">self</span><span class="s2">.</span><span class="s1">file_name</span><span class="s2">):</span>
+            <span class="s1">self</span><span class="s2">.</span><span class="s1">_create_file</span><span class="s2">()</span>
+
+    <span class="s0">def </span><span class="s1">_create_file</span><span class="s2">(</span><span class="s1">self</span><span class="s2">):</span>
+        <span class="s1">workbook </span><span class="s2">= </span><span class="s1">Workbook</span><span class="s2">()</span>
+        <span class="s1">sheet </span><span class="s2">= </span><span class="s1">workbook</span><span class="s2">.</span><span class="s1">active</span>
+        <span class="s1">sheet</span><span class="s2">.</span><span class="s1">title </span><span class="s2">= </span><span class="s4">&quot;Data&quot;</span>
+        <span class="s1">sheet</span><span class="s2">.</span><span class="s1">append</span><span class="s2">([</span>
+            <span class="s4">&quot;Название&quot;</span><span class="s2">, </span><span class="s4">&quot;Цена&quot;</span><span class="s2">, </span><span class="s4">&quot;URL&quot;</span><span class="s2">, </span><span class="s4">&quot;Описание&quot;</span><span class="s2">, </span><span class="s4">&quot;Просмотров&quot;</span><span class="s2">, </span><span class="s4">&quot;Дата публикации&quot;</span><span class="s2">, </span><span class="s4">&quot;Продавец&quot;</span><span class="s2">, </span><span class="s4">&quot;Адрес&quot;</span><span class="s2">, </span><span class="s4">&quot;Ссылка на продавца&quot;</span>
+        <span class="s2">])</span>
+        <span class="s1">workbook</span><span class="s2">.</span><span class="s1">save</span><span class="s2">(</span><span class="s1">self</span><span class="s2">.</span><span class="s1">file_name</span><span class="s2">)</span>
+
+    <span class="s0">def </span><span class="s1">append_data</span><span class="s2">(</span><span class="s1">self</span><span class="s2">, </span><span class="s1">data</span><span class="s2">):</span>
+        <span class="s1">workbook </span><span class="s2">= </span><span class="s1">load_workbook</span><span class="s2">(</span><span class="s1">self</span><span class="s2">.</span><span class="s1">file_name</span><span class="s2">)</span>
+        <span class="s1">sheet </span><span class="s2">= </span><span class="s1">workbook</span><span class="s2">.</span><span class="s1">active</span>
+        <span class="s1">row </span><span class="s2">= [</span>
+            <span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;name&quot;</span><span class="s2">, </span><span class="s4">'-'</span><span class="s2">),</span>
+            <span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;price&quot;</span><span class="s2">, </span><span class="s4">'-'</span><span class="s2">),</span>
+            <span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;url&quot;</span><span class="s2">, </span><span class="s4">'-'</span><span class="s2">),</span>
+            <span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;description&quot;</span><span class="s2">, </span><span class="s4">'-'</span><span class="s2">),</span>
+            <span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;views&quot;</span><span class="s2">, </span><span class="s4">'-'</span><span class="s2">),</span>
+            <span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;date_public&quot;</span><span class="s2">, </span><span class="s4">'-'</span><span class="s2">),</span>
+            <span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;seller_name&quot;</span><span class="s2">, </span><span class="s4">'no'</span><span class="s2">),</span>
+            <span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;geo&quot;</span><span class="s2">, </span><span class="s4">'-'</span><span class="s2">),</span>
+            <span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;seller_link&quot;</span><span class="s2">, </span><span class="s4">'-'</span><span class="s2">)</span>
+        <span class="s2">]</span>
+        <span class="s1">sheet</span><span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s1">row</span><span class="s2">)</span>
+        <span class="s1">workbook</span><span class="s2">.</span><span class="s1">save</span><span class="s2">(</span><span class="s1">self</span><span class="s2">.</span><span class="s1">file_name</span><span class="s2">)</span>
+
+</pre>
+</body>
+</html>

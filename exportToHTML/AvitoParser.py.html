@@ -1,0 +1,440 @@
+<html>
+<head>
+<title>AvitoParser.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #2aacb8;}
+.s5 { color: #5f826b; font-style: italic;}
+.s6 { color: #7a7e85;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+AvitoParser.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">configparser</span>
+<span class="s0">import </span><span class="s1">re</span>
+<span class="s0">import </span><span class="s1">threading</span>
+<span class="s0">import </span><span class="s1">time</span>
+<span class="s0">import </span><span class="s1">ssl</span>
+<span class="s0">import </span><span class="s1">time</span>
+<span class="s0">import </span><span class="s1">telebot</span>
+<span class="s0">from </span><span class="s1">parser_cls </span><span class="s0">import </span><span class="s1">AvitoParse</span>
+<span class="s0">import </span><span class="s1">configparser</span>
+
+
+<span class="s0">import </span><span class="s1">flet </span><span class="s0">as </span><span class="s1">ft</span>
+<span class="s0">from </span><span class="s1">loguru </span><span class="s0">import </span><span class="s1">logger</span>
+<span class="s0">from </span><span class="s1">notifiers</span><span class="s2">.</span><span class="s1">logging </span><span class="s0">import </span><span class="s1">NotificationHandler</span>
+
+
+<span class="s0">from </span><span class="s1">lang </span><span class="s0">import </span><span class="s2">*</span>
+<span class="s0">from </span><span class="s1">parser_cls </span><span class="s0">import </span><span class="s1">AvitoParse</span>
+<span class="s0">from </span><span class="s1">version </span><span class="s0">import </span><span class="s1">VERSION</span>
+
+
+<span class="s0">def </span><span class="s1">main</span><span class="s2">(</span><span class="s1">page</span><span class="s2">: </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Page</span><span class="s2">):</span>
+    <span class="s1">page</span><span class="s2">.</span><span class="s1">title </span><span class="s2">= </span><span class="s3">f'Parser Avito v </span><span class="s0">{</span><span class="s1">VERSION</span><span class="s0">}</span><span class="s3">'</span>
+    <span class="s1">page</span><span class="s2">.</span><span class="s1">theme_mode </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">ThemeMode</span><span class="s2">.</span><span class="s1">DARK</span>
+    <span class="s1">page</span><span class="s2">.</span><span class="s1">vertical_alignment </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">MainAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span>
+    <span class="s1">page</span><span class="s2">.</span><span class="s1">window</span><span class="s2">.</span><span class="s1">width </span><span class="s2">= </span><span class="s4">1000</span>
+    <span class="s1">page</span><span class="s2">.</span><span class="s1">window</span><span class="s2">.</span><span class="s1">height </span><span class="s2">= </span><span class="s4">950</span>
+    <span class="s1">page</span><span class="s2">.</span><span class="s1">window</span><span class="s2">.</span><span class="s1">min_width </span><span class="s2">= </span><span class="s4">650</span>
+    <span class="s1">page</span><span class="s2">.</span><span class="s1">window</span><span class="s2">.</span><span class="s1">min_height </span><span class="s2">= </span><span class="s4">500</span>
+    <span class="s1">page</span><span class="s2">.</span><span class="s1">padding </span><span class="s2">= </span><span class="s4">20</span>
+    <span class="s1">tg_logger_init </span><span class="s2">= </span><span class="s0">False</span>
+    <span class="s1">config </span><span class="s2">= </span><span class="s1">configparser</span><span class="s2">.</span><span class="s1">ConfigParser</span><span class="s2">()</span>
+    <span class="s1">config</span><span class="s2">.</span><span class="s1">read</span><span class="s2">(</span><span class="s3">&quot;settings.ini&quot;</span><span class="s2">, </span><span class="s1">encoding</span><span class="s2">=</span><span class="s3">'utf-8'</span><span class="s2">)</span>
+    <span class="s1">is_run </span><span class="s2">= </span><span class="s0">False</span>
+    <span class="s1">stop_event </span><span class="s2">= </span><span class="s1">threading</span><span class="s2">.</span><span class="s1">Event</span><span class="s2">()</span>
+
+    <span class="s0">def </span><span class="s1">set_up</span><span class="s2">():</span>
+        <span class="s5">&quot;&quot;&quot;Работа с настройками&quot;&quot;&quot;</span>
+        <span class="s0">nonlocal </span><span class="s1">config</span>
+        <span class="s0">try</span><span class="s2">:</span>
+            <span class="s3">&quot;&quot;&quot;Багфикс возможных проблем с экранированием&quot;&quot;&quot;</span>
+            <span class="s1">url_input</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s3">&quot;</span><span class="s0">\n</span><span class="s3">&quot;</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;URL&quot;</span><span class="s2">].</span><span class="s1">split</span><span class="s2">(</span><span class="s3">&quot;,&quot;</span><span class="s2">))</span>
+        <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">err</span><span class="s2">:</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">debug</span><span class="s2">(</span><span class="s3">f&quot;Ошибка url при открытии конфига: </span><span class="s0">{</span><span class="s1">err</span><span class="s0">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+            <span class="s0">with </span><span class="s1">open</span><span class="s2">(</span><span class="s3">'settings.ini'</span><span class="s2">) </span><span class="s0">as </span><span class="s1">file</span><span class="s2">:</span>
+                <span class="s1">line_url </span><span class="s2">= </span><span class="s1">file</span><span class="s2">.</span><span class="s1">readlines</span><span class="s2">()[</span><span class="s4">1</span><span class="s2">]</span>
+                <span class="s1">regex </span><span class="s2">= </span><span class="s3">r&quot;http.+&quot;</span>
+                <span class="s1">all_links </span><span class="s2">= </span><span class="s1">re</span><span class="s2">.</span><span class="s1">findall</span><span class="s2">(</span><span class="s1">regex</span><span class="s2">, </span><span class="s1">line_url</span><span class="s2">)</span>
+                <span class="s0">if </span><span class="s1">all_links</span><span class="s2">:</span>
+                    <span class="s1">url_input</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s3">&quot;</span><span class="s0">\n</span><span class="s3">&quot;</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">all_links</span><span class="s2">)</span>
+                <span class="s1">url_input</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s1">re</span><span class="s2">.</span><span class="s1">findall</span><span class="s2">(</span><span class="s1">regex</span><span class="s2">, </span><span class="s1">line_url</span><span class="s2">)[</span><span class="s4">0</span><span class="s2">]</span>
+        <span class="s1">tg_chat_id</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s3">&quot;</span><span class="s0">\n</span><span class="s3">&quot;</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;CHAT_ID&quot;</span><span class="s2">].</span><span class="s1">split</span><span class="s2">(</span><span class="s3">&quot;,&quot;</span><span class="s2">))</span>
+        <span class="s1">tg_token</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;TG_TOKEN&quot;</span><span class="s2">]</span>
+        <span class="s1">count_page</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;NUM_ADS&quot;</span><span class="s2">]</span>
+        <span class="s1">pause_sec</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;FREQ&quot;</span><span class="s2">]</span>
+        <span class="s1">max_view</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;MAX_VIEW&quot;</span><span class="s2">)</span>
+        <span class="s1">keyword_input</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s3">&quot;</span><span class="s0">\n</span><span class="s3">&quot;</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;KEYS&quot;</span><span class="s2">].</span><span class="s1">split</span><span class="s2">(</span><span class="s3">&quot;,&quot;</span><span class="s2">))</span>
+        <span class="s1">black_keyword_input</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s3">&quot;</span><span class="s0">\n</span><span class="s3">&quot;</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;KEYS_BLACK&quot;</span><span class="s2">, </span><span class="s3">&quot;&quot;</span><span class="s2">).</span><span class="s1">split</span><span class="s2">(</span><span class="s3">&quot;,&quot;</span><span class="s2">))</span>
+        <span class="s1">max_price</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;MAX_PRICE&quot;</span><span class="s2">)</span>
+        <span class="s1">min_price</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;MIN_PRICE&quot;</span><span class="s2">, </span><span class="s3">&quot;0&quot;</span><span class="s2">)</span>
+        <span class="s1">geo</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;GEO&quot;</span><span class="s2">, </span><span class="s3">&quot;&quot;</span><span class="s2">)</span>
+        <span class="s1">proxy</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;PROXY&quot;</span><span class="s2">, </span><span class="s3">&quot;&quot;</span><span class="s2">)</span>
+        <span class="s1">proxy_change_ip</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;PROXY_CHANGE_IP&quot;</span><span class="s2">, </span><span class="s3">&quot;&quot;</span><span class="s2">)</span>
+        <span class="s1">need_more_info</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s0">True if </span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;NEED_MORE_INFO&quot;</span><span class="s2">, </span><span class="s3">&quot;0&quot;</span><span class="s2">) == </span><span class="s3">&quot;1&quot; </span><span class="s0">else False</span>
+        <span class="s1">debug_mode</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s0">True if </span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;DEBUG_MODE&quot;</span><span class="s2">, </span><span class="s3">&quot;0&quot;</span><span class="s2">) == </span><span class="s3">&quot;1&quot; </span><span class="s0">else False</span>
+        <span class="s1">fast_speed</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s0">True if </span><span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;FAST_SPEED&quot;</span><span class="s2">, </span><span class="s3">&quot;0&quot;</span><span class="s2">) == </span><span class="s3">&quot;1&quot; </span><span class="s0">else False</span>
+        <span class="s1">page</span><span class="s2">.</span><span class="s1">update</span><span class="s2">()</span>
+
+    <span class="s0">def </span><span class="s1">save_config</span><span class="s2">():</span>
+        <span class="s5">&quot;&quot;&quot;Сохраняет конфиг&quot;&quot;&quot;</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;TG_TOKEN&quot;</span><span class="s2">] = </span><span class="s1">tg_token</span><span class="s2">.</span><span class="s1">value</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;CHAT_ID&quot;</span><span class="s2">] = </span><span class="s3">&quot;,&quot;</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">tg_chat_id</span><span class="s2">.</span><span class="s1">value</span><span class="s2">.</span><span class="s1">split</span><span class="s2">())</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;URL&quot;</span><span class="s2">] = </span><span class="s3">&quot;,&quot;</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">str</span><span class="s2">(</span><span class="s1">url_input</span><span class="s2">.</span><span class="s1">value</span><span class="s2">).</span><span class="s1">replace</span><span class="s2">(</span><span class="s3">'%'</span><span class="s2">, </span><span class="s3">'%%'</span><span class="s2">).</span><span class="s1">split</span><span class="s2">())  </span><span class="s6"># bugfix</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;NUM_ADS&quot;</span><span class="s2">] = </span><span class="s1">count_page</span><span class="s2">.</span><span class="s1">value</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;FREQ&quot;</span><span class="s2">] = </span><span class="s1">pause_sec</span><span class="s2">.</span><span class="s1">value</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;KEYS&quot;</span><span class="s2">] = </span><span class="s3">&quot;,&quot;</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">keyword_input</span><span class="s2">.</span><span class="s1">value</span><span class="s2">.</span><span class="s1">split</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s0">\n</span><span class="s3">&quot;</span><span class="s2">))</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;KEYS_BLACK&quot;</span><span class="s2">] = </span><span class="s3">&quot;,&quot;</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">black_keyword_input</span><span class="s2">.</span><span class="s1">value</span><span class="s2">.</span><span class="s1">split</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s0">\n</span><span class="s3">&quot;</span><span class="s2">))</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;MAX_PRICE&quot;</span><span class="s2">] = </span><span class="s1">max_price</span><span class="s2">.</span><span class="s1">value</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;MIN_PRICE&quot;</span><span class="s2">] = </span><span class="s1">min_price</span><span class="s2">.</span><span class="s1">value</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;MAX_VIEW&quot;</span><span class="s2">] = </span><span class="s1">max_view</span><span class="s2">.</span><span class="s1">value</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;GEO&quot;</span><span class="s2">] = </span><span class="s1">geo</span><span class="s2">.</span><span class="s1">value</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;PROXY&quot;</span><span class="s2">] = </span><span class="s1">proxy</span><span class="s2">.</span><span class="s1">value</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;PROXY_CHANGE_IP&quot;</span><span class="s2">] = </span><span class="s1">proxy_change_ip</span><span class="s2">.</span><span class="s1">value</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;NEED_MORE_INFO&quot;</span><span class="s2">] = </span><span class="s3">&quot;1&quot; </span><span class="s0">if </span><span class="s1">need_more_info</span><span class="s2">.</span><span class="s1">value </span><span class="s0">else </span><span class="s3">&quot;0&quot;</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;DEBUG_MODE&quot;</span><span class="s2">] = </span><span class="s3">&quot;1&quot; </span><span class="s0">if </span><span class="s1">debug_mode</span><span class="s2">.</span><span class="s1">value </span><span class="s0">else </span><span class="s3">&quot;0&quot;</span>
+        <span class="s1">config</span><span class="s2">[</span><span class="s3">&quot;Avito&quot;</span><span class="s2">][</span><span class="s3">&quot;FAST_SPEED&quot;</span><span class="s2">] = </span><span class="s3">&quot;1&quot; </span><span class="s0">if </span><span class="s1">fast_speed</span><span class="s2">.</span><span class="s1">value </span><span class="s0">else </span><span class="s3">&quot;0&quot;</span>
+        <span class="s0">with </span><span class="s1">open</span><span class="s2">(</span><span class="s3">'settings.ini'</span><span class="s2">, </span><span class="s3">'w'</span><span class="s2">, </span><span class="s1">encoding</span><span class="s2">=</span><span class="s3">'utf-8'</span><span class="s2">) </span><span class="s0">as </span><span class="s1">configfile</span><span class="s2">:</span>
+            <span class="s1">config</span><span class="s2">.</span><span class="s1">write</span><span class="s2">(</span><span class="s1">configfile</span><span class="s2">)</span>
+        <span class="s1">logger</span><span class="s2">.</span><span class="s1">debug</span><span class="s2">(</span><span class="s3">&quot;Настройки сохранены&quot;</span><span class="s2">)</span>
+
+    <span class="s6"># Читаем настройки</span>
+    <span class="s1">config </span><span class="s2">= </span><span class="s1">configparser</span><span class="s2">.</span><span class="s1">ConfigParser</span><span class="s2">()</span>
+    <span class="s1">config</span><span class="s2">.</span><span class="s1">read</span><span class="s2">(</span><span class="s3">&quot;settings.ini&quot;</span><span class="s2">)</span>
+
+    <span class="s1">TELEGRAM_BOT_TOKEN </span><span class="s2">= </span><span class="s1">config</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;telegram&quot;</span><span class="s2">, </span><span class="s3">&quot;bot_token&quot;</span><span class="s2">)</span>
+    <span class="s1">TELEGRAM_CHAT_ID </span><span class="s2">= </span><span class="s1">config</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;telegram&quot;</span><span class="s2">, </span><span class="s3">&quot;chat_id&quot;</span><span class="s2">)</span>
+
+    <span class="s1">bot </span><span class="s2">= </span><span class="s1">telebot</span><span class="s2">.</span><span class="s1">TeleBot</span><span class="s2">(</span><span class="s1">TELEGRAM_BOT_TOKEN</span><span class="s2">)</span>
+
+    <span class="s0">def </span><span class="s1">send_telegram_message</span><span class="s2">(</span><span class="s1">message</span><span class="s2">):</span>
+        <span class="s5">&quot;&quot;&quot;Отправка сообщения в Telegram&quot;&quot;&quot;</span>
+        <span class="s1">bot</span><span class="s2">.</span><span class="s1">send_message</span><span class="s2">(</span><span class="s1">TELEGRAM_CHAT_ID</span><span class="s2">, </span><span class="s1">message</span><span class="s2">)</span>
+
+    <span class="s0">def </span><span class="s1">monitor_new_listings</span><span class="s2">():</span>
+        <span class="s5">&quot;&quot;&quot;Мониторинг новых объявлений в реальном времени&quot;&quot;&quot;</span>
+        <span class="s1">parser </span><span class="s2">= </span><span class="s1">AvitoParse</span><span class="s2">()</span>
+        <span class="s1">seen_links </span><span class="s2">= </span><span class="s1">set</span><span class="s2">()</span>
+
+        <span class="s0">while True</span><span class="s2">:</span>
+            <span class="s1">listings </span><span class="s2">= </span><span class="s1">parser</span><span class="s2">.</span><span class="s1">get_listings</span><span class="s2">()</span>
+            <span class="s0">for </span><span class="s1">listing </span><span class="s0">in </span><span class="s1">listings</span><span class="s2">:</span>
+                <span class="s0">if </span><span class="s1">listing</span><span class="s2">[</span><span class="s3">&quot;link&quot;</span><span class="s2">] </span><span class="s0">not in </span><span class="s1">seen_links</span><span class="s2">:</span>
+                    <span class="s1">message </span><span class="s2">= </span><span class="s3">f&quot;🚗 Новое объявление:</span><span class="s0">\n{</span><span class="s1">listing</span><span class="s2">[</span><span class="s3">'title'</span><span class="s2">]</span><span class="s0">}\n</span><span class="s3">💰 Цена: </span><span class="s0">{</span><span class="s1">listing</span><span class="s2">[</span><span class="s3">'price'</span><span class="s2">]</span><span class="s0">}\n</span><span class="s3">🔗 </span><span class="s0">{</span><span class="s1">listing</span><span class="s2">[</span><span class="s3">'link'</span><span class="s2">]</span><span class="s0">}</span><span class="s3">&quot;</span>
+                    <span class="s1">send_telegram_message</span><span class="s2">(</span><span class="s1">message</span><span class="s2">)</span>
+                    <span class="s1">seen_links</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">listing</span><span class="s2">[</span><span class="s3">&quot;link&quot;</span><span class="s2">])</span>
+
+            <span class="s1">time</span><span class="s2">.</span><span class="s1">sleep</span><span class="s2">(</span><span class="s4">60</span><span class="s2">)  </span><span class="s6"># Проверка каждую минуту</span>
+
+    <span class="s0">if </span><span class="s1">__name__ </span><span class="s2">== </span><span class="s3">&quot;__main__&quot;</span><span class="s2">:</span>
+        <span class="s1">monitor_new_listings</span><span class="s2">()</span>
+
+
+    <span class="s0">def </span><span class="s1">check_tg_btn</span><span class="s2">(</span><span class="s1">e</span><span class="s2">):</span>
+        <span class="s0">if </span><span class="s1">len</span><span class="s2">(</span><span class="s1">tg_chat_id</span><span class="s2">.</span><span class="s1">value</span><span class="s2">) &gt; </span><span class="s4">5 </span><span class="s0">and </span><span class="s1">len</span><span class="s2">(</span><span class="s1">tg_token</span><span class="s2">.</span><span class="s1">value</span><span class="s2">) &gt; </span><span class="s4">10</span><span class="s2">:</span>
+            <span class="s1">btn_test_tg</span><span class="s2">.</span><span class="s1">disabled </span><span class="s2">= </span><span class="s0">False</span>
+        <span class="s0">else</span><span class="s2">:</span>
+            <span class="s1">btn_test_tg</span><span class="s2">.</span><span class="s1">disabled </span><span class="s2">= </span><span class="s0">True</span>
+        <span class="s1">page</span><span class="s2">.</span><span class="s1">update</span><span class="s2">()</span>
+
+    <span class="s0">def </span><span class="s1">close_dlg</span><span class="s2">(</span><span class="s1">e</span><span class="s2">):</span>
+        <span class="s1">dlg_modal_proxy</span><span class="s2">.</span><span class="s1">open </span><span class="s2">= </span><span class="s0">False</span>
+        <span class="s1">page</span><span class="s2">.</span><span class="s1">update</span><span class="s2">()</span>
+
+    <span class="s0">def </span><span class="s1">logger_console_init</span><span class="s2">():</span>
+        <span class="s1">logger</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">logger_console_widget</span><span class="s2">, </span><span class="s1">format</span><span class="s2">=</span><span class="s3">&quot;{time:HH:mm:ss} - {message}&quot;</span><span class="s2">)</span>
+
+    <span class="s0">def </span><span class="s1">logger_console_widget</span><span class="s2">(</span><span class="s1">message</span><span class="s2">):</span>
+        <span class="s1">console_widget</span><span class="s2">.</span><span class="s1">value </span><span class="s2">+= </span><span class="s1">message</span>
+        <span class="s1">page</span><span class="s2">.</span><span class="s1">update</span><span class="s2">()</span>
+
+    <span class="s0">def </span><span class="s1">logger_tg</span><span class="s2">():</span>
+        <span class="s5">&quot;&quot;&quot;Логирование в telegram&quot;&quot;&quot;</span>
+        <span class="s0">nonlocal </span><span class="s1">tg_logger_init</span>
+        <span class="s1">token </span><span class="s2">= </span><span class="s1">tg_token</span><span class="s2">.</span><span class="s1">value</span>
+        <span class="s1">chat_ids </span><span class="s2">= </span><span class="s1">tg_chat_id</span><span class="s2">.</span><span class="s1">value</span><span class="s2">.</span><span class="s1">split</span><span class="s2">()</span>
+
+        <span class="s0">if </span><span class="s1">tg_logger_init</span><span class="s2">:</span>
+            <span class="s0">return</span>
+
+        <span class="s0">if </span><span class="s1">token </span><span class="s0">and </span><span class="s1">chat_ids</span><span class="s2">:</span>
+            <span class="s0">for </span><span class="s1">chat_id </span><span class="s0">in </span><span class="s1">chat_ids</span><span class="s2">:</span>
+                <span class="s1">params </span><span class="s2">= {</span>
+                    <span class="s3">'token'</span><span class="s2">: </span><span class="s1">token</span><span class="s2">,</span>
+                    <span class="s3">'chat_id'</span><span class="s2">: </span><span class="s1">chat_id</span>
+                <span class="s2">}</span>
+                <span class="s1">tg_handler </span><span class="s2">= </span><span class="s1">NotificationHandler</span><span class="s2">(</span><span class="s3">&quot;telegram&quot;</span><span class="s2">, </span><span class="s1">defaults</span><span class="s2">=</span><span class="s1">params</span><span class="s2">)</span>
+
+                <span class="s3">&quot;&quot;&quot;Все логи уровня SUCCESS и выше отсылаются в телегу&quot;&quot;&quot;</span>
+                <span class="s1">logger</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">tg_handler</span><span class="s2">, </span><span class="s1">level</span><span class="s2">=</span><span class="s3">&quot;SUCCESS&quot;</span><span class="s2">, </span><span class="s1">format</span><span class="s2">=</span><span class="s3">&quot;{message}&quot;</span><span class="s2">)</span>
+
+            <span class="s1">tg_logger_init </span><span class="s2">= </span><span class="s0">True</span>
+            <span class="s0">return None</span>
+
+        <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s3">&quot;Данные для отправки в telegram не заполнены. Результат будет сохранен в файл и выведен здесь&quot;</span><span class="s2">)</span>
+
+    <span class="s0">def </span><span class="s1">telegram_log_test</span><span class="s2">(</span><span class="s1">e</span><span class="s2">):</span>
+        <span class="s5">&quot;&quot;&quot;Тестирование отправки сообщения в telegram&quot;&quot;&quot;</span>
+        <span class="s1">logger_tg</span><span class="s2">()</span>
+        <span class="s1">token </span><span class="s2">= </span><span class="s1">tg_token</span><span class="s2">.</span><span class="s1">value</span>
+        <span class="s1">chat_id </span><span class="s2">= </span><span class="s1">tg_chat_id</span><span class="s2">.</span><span class="s1">value</span>
+        <span class="s0">if </span><span class="s1">all</span><span class="s2">([</span><span class="s1">token</span><span class="s2">, </span><span class="s1">chat_id</span><span class="s2">]):</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">success</span><span class="s2">(</span><span class="s3">'test'</span><span class="s2">)</span>
+
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s1">TG_TEST_MSG</span><span class="s2">)</span>
+            <span class="s0">return None</span>
+        <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s3">&quot;Должны быть заполнены поля ТОКЕН TELEGRAM и CHAT ID TELEGRAM&quot;</span><span class="s2">)</span>
+
+    <span class="s1">dlg_modal_proxy </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">AlertDialog</span><span class="s2">(</span>
+        <span class="s1">modal</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+        <span class="s1">title</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Text</span><span class="s2">(</span><span class="s3">&quot;Подробнее насчёт прокси&quot;</span><span class="s2">),</span>
+        <span class="s1">content</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Container</span><span class="s2">(</span>
+            <span class="s1">content</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Text</span><span class="s2">(</span><span class="s1">BUY_PROXY_LINK</span><span class="s2">, </span><span class="s1">size</span><span class="s2">=</span><span class="s4">20</span><span class="s2">),</span>
+            <span class="s1">width</span><span class="s2">=</span><span class="s4">600</span><span class="s2">,</span>
+            <span class="s1">height</span><span class="s2">=</span><span class="s4">400</span><span class="s2">,</span>
+            <span class="s1">padding</span><span class="s2">=</span><span class="s4">10</span>
+        <span class="s2">),</span>
+        <span class="s1">actions</span><span class="s2">=[</span>
+            <span class="s1">ft</span><span class="s2">.</span><span class="s1">TextButton</span><span class="s2">(</span><span class="s3">&quot;Купить прокси&quot;</span><span class="s2">,</span>
+                          <span class="s1">on_click</span><span class="s2">=</span><span class="s0">lambda </span><span class="s1">e</span><span class="s2">: </span><span class="s1">page</span><span class="s2">.</span><span class="s1">launch_url</span><span class="s2">(</span>
+                              <span class="s3">&quot;https://mobileproxy.space/user.html&quot;</span><span class="s2">)),</span>
+            <span class="s1">ft</span><span class="s2">.</span><span class="s1">TextButton</span><span class="s2">(</span><span class="s3">&quot;Отмена&quot;</span><span class="s2">, </span><span class="s1">on_click</span><span class="s2">=</span><span class="s1">close_dlg</span><span class="s2">),</span>
+
+        <span class="s2">],</span>
+        <span class="s1">actions_alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">MainAxisAlignment</span><span class="s2">.</span><span class="s1">END</span><span class="s2">,</span>
+        <span class="s1">on_dismiss</span><span class="s2">=</span><span class="s0">lambda </span><span class="s1">e</span><span class="s2">: </span><span class="s1">print</span><span class="s2">(</span><span class="s3">&quot;Modal dialog dismissed!&quot;</span><span class="s2">),</span>
+    <span class="s2">)</span>
+
+    <span class="s0">def </span><span class="s1">open_dlg_modal</span><span class="s2">(</span><span class="s1">e</span><span class="s2">):</span>
+        <span class="s1">page</span><span class="s2">.</span><span class="s1">overlay</span><span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s1">dlg_modal_proxy</span><span class="s2">)</span>
+        <span class="s1">dlg_modal_proxy</span><span class="s2">.</span><span class="s1">open </span><span class="s2">= </span><span class="s0">True</span>
+        <span class="s1">page</span><span class="s2">.</span><span class="s1">update</span><span class="s2">()</span>
+
+    <span class="s0">def </span><span class="s1">start_parser</span><span class="s2">(</span><span class="s1">e</span><span class="s2">):</span>
+        <span class="s0">nonlocal </span><span class="s1">is_run</span>
+        <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s3">&quot;Старт&quot;</span><span class="s2">)</span>
+        <span class="s1">stop_event</span><span class="s2">.</span><span class="s1">clear</span><span class="s2">()</span>
+        <span class="s1">save_config</span><span class="s2">()</span>
+        <span class="s1">console_widget</span><span class="s2">.</span><span class="s1">height </span><span class="s2">= </span><span class="s4">700</span>
+        <span class="s1">input_fields</span><span class="s2">.</span><span class="s1">visible </span><span class="s2">= </span><span class="s0">False</span>
+        <span class="s1">start_btn</span><span class="s2">.</span><span class="s1">visible </span><span class="s2">= </span><span class="s0">False</span>
+        <span class="s1">stop_btn</span><span class="s2">.</span><span class="s1">visible </span><span class="s2">= </span><span class="s0">True</span>
+        <span class="s1">is_run </span><span class="s2">= </span><span class="s0">True</span>
+        <span class="s1">page</span><span class="s2">.</span><span class="s1">update</span><span class="s2">()</span>
+        <span class="s0">while </span><span class="s1">is_run </span><span class="s0">and not </span><span class="s1">stop_event</span><span class="s2">.</span><span class="s1">is_set</span><span class="s2">():</span>
+            <span class="s1">run_process</span><span class="s2">()</span>
+            <span class="s0">if not </span><span class="s1">is_run</span><span class="s2">:</span>
+                <span class="s0">return</span>
+            <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s3">&quot;Пауза между повторами&quot;</span><span class="s2">)</span>
+            <span class="s0">for </span><span class="s1">_ </span><span class="s0">in </span><span class="s1">range</span><span class="s2">(</span><span class="s1">int</span><span class="s2">(</span><span class="s1">pause_sec</span><span class="s2">.</span><span class="s1">value </span><span class="s0">if </span><span class="s1">pause_sec</span><span class="s2">.</span><span class="s1">value </span><span class="s0">else </span><span class="s4">300</span><span class="s2">)):</span>
+                <span class="s1">time</span><span class="s2">.</span><span class="s1">sleep</span><span class="s2">(</span><span class="s4">1</span><span class="s2">)</span>
+                <span class="s0">if not </span><span class="s1">is_run</span><span class="s2">:</span>
+                    <span class="s1">logger</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s3">&quot;Завершено&quot;</span><span class="s2">)</span>
+                    <span class="s1">start_btn</span><span class="s2">.</span><span class="s1">text </span><span class="s2">= </span><span class="s3">&quot;Старт&quot;</span>
+                    <span class="s1">start_btn</span><span class="s2">.</span><span class="s1">disabled </span><span class="s2">= </span><span class="s0">False</span>
+                    <span class="s1">page</span><span class="s2">.</span><span class="s1">update</span><span class="s2">()</span>
+                    <span class="s0">return</span>
+
+    <span class="s0">def </span><span class="s1">stop_parser</span><span class="s2">(</span><span class="s1">e</span><span class="s2">):</span>
+        <span class="s0">nonlocal </span><span class="s1">is_run</span>
+        <span class="s1">stop_event</span><span class="s2">.</span><span class="s1">set</span><span class="s2">()</span>
+        <span class="s1">logger</span><span class="s2">.</span><span class="s1">debug</span><span class="s2">(</span><span class="s3">&quot;Стоп&quot;</span><span class="s2">)</span>
+        <span class="s1">is_run </span><span class="s2">= </span><span class="s0">False</span>
+        <span class="s1">console_widget</span><span class="s2">.</span><span class="s1">height </span><span class="s2">= </span><span class="s4">100</span>
+        <span class="s1">input_fields</span><span class="s2">.</span><span class="s1">visible </span><span class="s2">= </span><span class="s0">True</span>
+        <span class="s1">stop_btn</span><span class="s2">.</span><span class="s1">visible </span><span class="s2">= </span><span class="s0">False</span>
+        <span class="s1">start_btn</span><span class="s2">.</span><span class="s1">visible </span><span class="s2">= </span><span class="s0">True</span>
+        <span class="s1">start_btn</span><span class="s2">.</span><span class="s1">text </span><span class="s2">= </span><span class="s3">&quot;Останавливаюсь...&quot;</span>
+        <span class="s1">start_btn</span><span class="s2">.</span><span class="s1">disabled </span><span class="s2">= </span><span class="s0">True</span>
+        <span class="s1">page</span><span class="s2">.</span><span class="s1">update</span><span class="s2">()</span>
+
+    <span class="s0">def </span><span class="s1">required_field_for_more_info</span><span class="s2">(</span><span class="s1">e</span><span class="s2">):</span>
+        <span class="s0">if </span><span class="s1">geo</span><span class="s2">.</span><span class="s1">value </span><span class="s0">or </span><span class="s2">(</span><span class="s1">max_view</span><span class="s2">.</span><span class="s1">value </span><span class="s0">and </span><span class="s1">max_view</span><span class="s2">.</span><span class="s1">value </span><span class="s2">!= </span><span class="s3">&quot;0&quot;</span><span class="s2">):</span>
+            <span class="s1">need_more_info</span><span class="s2">.</span><span class="s1">value </span><span class="s2">= </span><span class="s0">True</span>
+        <span class="s1">page</span><span class="s2">.</span><span class="s1">update</span><span class="s2">()</span>
+
+    <span class="s0">def </span><span class="s1">run_process</span><span class="s2">():</span>
+        <span class="s1">logger_tg</span><span class="s2">()</span>
+        <span class="s1">parser </span><span class="s2">= </span><span class="s1">AvitoParse</span><span class="s2">(</span>
+            <span class="s1">stop_event</span><span class="s2">=</span><span class="s1">stop_event</span><span class="s2">,</span>
+            <span class="s1">url</span><span class="s2">=</span><span class="s1">url_input</span><span class="s2">.</span><span class="s1">value</span><span class="s2">.</span><span class="s1">split</span><span class="s2">(),</span>
+            <span class="s1">count</span><span class="s2">=</span><span class="s1">int</span><span class="s2">(</span><span class="s1">count_page</span><span class="s2">.</span><span class="s1">value</span><span class="s2">),</span>
+            <span class="s1">keysword_list</span><span class="s2">=</span><span class="s1">keyword_input</span><span class="s2">.</span><span class="s1">value</span><span class="s2">.</span><span class="s1">split</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s0">\n</span><span class="s3">&quot;</span><span class="s2">) </span><span class="s0">if </span><span class="s1">keyword_input</span><span class="s2">.</span><span class="s1">value </span><span class="s0">else None</span><span class="s2">,</span>
+            <span class="s1">keysword_black_list</span><span class="s2">=</span><span class="s1">black_keyword_input</span><span class="s2">.</span><span class="s1">value</span><span class="s2">.</span><span class="s1">split</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s0">\n</span><span class="s3">&quot;</span><span class="s2">) </span><span class="s0">if </span><span class="s1">black_keyword_input</span><span class="s2">.</span><span class="s1">value </span><span class="s0">else None</span><span class="s2">,</span>
+            <span class="s1">max_price</span><span class="s2">=</span><span class="s1">int</span><span class="s2">(</span><span class="s1">max_price</span><span class="s2">.</span><span class="s1">value</span><span class="s2">),</span>
+            <span class="s1">min_price</span><span class="s2">=</span><span class="s1">int</span><span class="s2">(</span><span class="s1">min_price</span><span class="s2">.</span><span class="s1">value</span><span class="s2">),</span>
+            <span class="s1">geo</span><span class="s2">=</span><span class="s1">geo</span><span class="s2">.</span><span class="s1">value</span><span class="s2">,</span>
+            <span class="s1">proxy</span><span class="s2">=</span><span class="s1">proxy</span><span class="s2">.</span><span class="s1">value</span><span class="s2">,</span>
+            <span class="s1">proxy_change_url</span><span class="s2">=</span><span class="s1">proxy_change_ip</span><span class="s2">.</span><span class="s1">value</span><span class="s2">,</span>
+            <span class="s1">debug_mode</span><span class="s2">=</span><span class="s1">debug_mode</span><span class="s2">.</span><span class="s1">value</span><span class="s2">,</span>
+            <span class="s1">need_more_info</span><span class="s2">=</span><span class="s1">need_more_info</span><span class="s2">.</span><span class="s1">value</span><span class="s2">,</span>
+            <span class="s1">fast_speed</span><span class="s2">=</span><span class="s1">fast_speed</span><span class="s2">.</span><span class="s1">value</span><span class="s2">,</span>
+            <span class="s1">max_views</span><span class="s2">=</span><span class="s1">max_view</span><span class="s2">.</span><span class="s1">value </span><span class="s0">if </span><span class="s1">max_view</span><span class="s2">.</span><span class="s1">value </span><span class="s0">and </span><span class="s1">max_view</span><span class="s2">.</span><span class="s1">value </span><span class="s2">!= </span><span class="s3">&quot;0&quot; </span><span class="s0">else None</span>
+        <span class="s2">)</span>
+        <span class="s1">parsing_thread </span><span class="s2">= </span><span class="s1">threading</span><span class="s2">.</span><span class="s1">Thread</span><span class="s2">(</span><span class="s1">target</span><span class="s2">=</span><span class="s1">parser</span><span class="s2">.</span><span class="s1">parse</span><span class="s2">)</span>
+        <span class="s1">parsing_thread</span><span class="s2">.</span><span class="s1">start</span><span class="s2">()</span>
+        <span class="s1">parsing_thread</span><span class="s2">.</span><span class="s1">join</span><span class="s2">()</span>
+        <span class="s1">start_btn</span><span class="s2">.</span><span class="s1">disabled </span><span class="s2">= </span><span class="s0">False</span>
+        <span class="s1">start_btn</span><span class="s2">.</span><span class="s1">text </span><span class="s2">= </span><span class="s3">&quot;Старт&quot;</span>
+        <span class="s1">page</span><span class="s2">.</span><span class="s1">update</span><span class="s2">()</span>
+
+    <span class="s1">label_required </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Text</span><span class="s2">(</span><span class="s3">&quot;Обязательные параметры&quot;</span><span class="s2">, </span><span class="s1">size</span><span class="s2">=</span><span class="s4">20</span><span class="s2">)</span>
+    <span class="s1">url_input </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextField</span><span class="s2">(</span>
+        <span class="s1">label</span><span class="s2">=</span><span class="s3">&quot;Вставьте начальную ссылку или ссылки. Используйте Enter между значениями&quot;</span><span class="s2">,</span>
+        <span class="s1">multiline</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+        <span class="s1">min_lines</span><span class="s2">=</span><span class="s4">1</span><span class="s2">,</span>
+        <span class="s1">max_lines</span><span class="s2">=</span><span class="s4">50</span><span class="s2">,</span>
+        <span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+        <span class="s1">tooltip</span><span class="s2">=</span><span class="s1">URL_INPUT_HELP</span><span class="s2">,</span>
+    <span class="s2">)</span>
+    <span class="s1">min_price </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextField</span><span class="s2">(</span><span class="s1">label</span><span class="s2">=</span><span class="s3">&quot;Минимальная цена&quot;</span><span class="s2">, </span><span class="s1">width</span><span class="s2">=</span><span class="s4">400</span><span class="s2">, </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">, </span><span class="s1">tooltip</span><span class="s2">=</span><span class="s1">MIN_PRICE_HELP</span><span class="s2">)</span>
+    <span class="s1">max_price </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextField</span><span class="s2">(</span><span class="s1">label</span><span class="s2">=</span><span class="s3">&quot;Максимальная цена&quot;</span><span class="s2">, </span><span class="s1">width</span><span class="s2">=</span><span class="s4">400</span><span class="s2">, </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">, </span><span class="s1">tooltip</span><span class="s2">=</span><span class="s1">MAX_PRICE_HELP</span><span class="s2">)</span>
+    <span class="s1">label_not_required </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Text</span><span class="s2">(</span><span class="s3">&quot;Дополнительные параметры&quot;</span><span class="s2">)</span>
+    <span class="s1">keyword_input </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextField</span><span class="s2">(</span>
+        <span class="s1">label</span><span class="s2">=</span><span class="s3">&quot;Ключевые слова (через Enter)&quot;</span><span class="s2">,</span>
+        <span class="s1">multiline</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+        <span class="s1">min_lines</span><span class="s2">=</span><span class="s4">1</span><span class="s2">,</span>
+        <span class="s1">max_lines</span><span class="s2">=</span><span class="s4">5</span><span class="s2">,</span>
+        <span class="s1">width</span><span class="s2">=</span><span class="s4">400</span><span class="s2">,</span>
+        <span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+        <span class="s1">tooltip</span><span class="s2">=</span><span class="s1">KEYWORD_INPUT_HELP</span>
+    <span class="s2">)</span>
+    <span class="s1">black_keyword_input </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextField</span><span class="s2">(</span>
+        <span class="s1">label</span><span class="s2">=</span><span class="s3">&quot;Черный список ключевых слов (через Enter)&quot;</span><span class="s2">,</span>
+        <span class="s1">multiline</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+        <span class="s1">min_lines</span><span class="s2">=</span><span class="s4">1</span><span class="s2">,</span>
+        <span class="s1">max_lines</span><span class="s2">=</span><span class="s4">5</span><span class="s2">,</span>
+        <span class="s1">width</span><span class="s2">=</span><span class="s4">400</span><span class="s2">,</span>
+        <span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+        <span class="s1">tooltip</span><span class="s2">=</span><span class="s1">KEYWORD_BLACK_INPUT_HELP</span>
+    <span class="s2">)</span>
+    <span class="s1">count_page </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextField</span><span class="s2">(</span><span class="s1">label</span><span class="s2">=</span><span class="s3">&quot;Количество страниц&quot;</span><span class="s2">, </span><span class="s1">width</span><span class="s2">=</span><span class="s4">400</span><span class="s2">, </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">, </span><span class="s1">tooltip</span><span class="s2">=</span><span class="s1">COUNT_PAGE_HELP</span><span class="s2">)</span>
+    <span class="s1">pause_sec </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextField</span><span class="s2">(</span><span class="s1">label</span><span class="s2">=</span><span class="s3">&quot;Пауза в секундах между повторами&quot;</span><span class="s2">, </span><span class="s1">width</span><span class="s2">=</span><span class="s4">400</span><span class="s2">, </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">, </span><span class="s1">tooltip</span><span class="s2">=</span><span class="s1">PAUSE_SEC_HELP</span><span class="s2">)</span>
+    <span class="s1">max_view </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextField</span><span class="s2">(</span><span class="s1">label</span><span class="s2">=</span><span class="s3">&quot;Макс. просмотров&quot;</span><span class="s2">, </span><span class="s1">width</span><span class="s2">=</span><span class="s4">400</span><span class="s2">, </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">, </span><span class="s1">tooltip</span><span class="s2">=</span><span class="s1">MAX_VIEW_HELP</span><span class="s2">,</span>
+                            <span class="s1">on_change</span><span class="s2">=</span><span class="s1">required_field_for_more_info</span><span class="s2">)</span>
+    <span class="s1">tg_token </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextField</span><span class="s2">(</span><span class="s1">label</span><span class="s2">=</span><span class="s3">&quot;Token telegram&quot;</span><span class="s2">, </span><span class="s1">width</span><span class="s2">=</span><span class="s4">400</span><span class="s2">, </span><span class="s1">on_change</span><span class="s2">=</span><span class="s1">check_tg_btn</span><span class="s2">, </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+                            <span class="s1">tooltip</span><span class="s2">=</span><span class="s1">TG_TOKEN_HELP</span><span class="s2">)</span>
+    <span class="s1">tg_chat_id </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextField</span><span class="s2">(</span><span class="s1">label</span><span class="s2">=</span><span class="s3">&quot;Chat id telegram. Можно несколько&quot;</span><span class="s2">, </span><span class="s1">width</span><span class="s2">=</span><span class="s4">400</span><span class="s2">, </span><span class="s1">on_change</span><span class="s2">=</span><span class="s1">check_tg_btn</span><span class="s2">,</span>
+                              <span class="s1">multiline</span><span class="s2">=</span><span class="s0">True</span><span class="s2">, </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">, </span><span class="s1">tooltip</span><span class="s2">=</span><span class="s1">TG_CHAT_ID_HELP</span><span class="s2">)</span>
+    <span class="s1">btn_test_tg </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">ElevatedButton</span><span class="s2">(</span><span class="s1">text</span><span class="s2">=</span><span class="s3">&quot;Проверить tg&quot;</span><span class="s2">, </span><span class="s1">disabled</span><span class="s2">=</span><span class="s0">True</span><span class="s2">, </span><span class="s1">on_click</span><span class="s2">=</span><span class="s1">telegram_log_test</span><span class="s2">, </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+                                    <span class="s1">tooltip</span><span class="s2">=</span><span class="s1">BTN_TEST_TG_HELP</span><span class="s2">)</span>
+    <span class="s1">proxy </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextField</span><span class="s2">(</span><span class="s1">label</span><span class="s2">=</span><span class="s3">&quot;Прокси в формате username:password@server:port&quot;</span><span class="s2">, </span><span class="s1">width</span><span class="s2">=</span><span class="s4">400</span><span class="s2">, </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+                         <span class="s1">tooltip</span><span class="s2">=</span><span class="s1">PROXY_HELP</span><span class="s2">)</span>
+    <span class="s1">proxy_change_ip </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextField</span><span class="s2">(</span>
+        <span class="s1">label</span><span class="s2">=</span><span class="s3">&quot;Ссылка для изменения IP, в формате https://changeip.mobileproxy.space/?proxy_key=***&quot;</span><span class="s2">, </span><span class="s1">width</span><span class="s2">=</span><span class="s4">400</span><span class="s2">,</span>
+        <span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">, </span><span class="s1">tooltip</span><span class="s2">=</span><span class="s1">PROXY_CHANGE_IP_HELP</span><span class="s2">)</span>
+    <span class="s1">proxy_btn_help </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">ElevatedButton</span><span class="s2">(</span><span class="s1">text</span><span class="s2">=</span><span class="s3">&quot;Подробнее про прокси&quot;</span><span class="s2">, </span><span class="s1">on_click</span><span class="s2">=</span><span class="s1">open_dlg_modal</span><span class="s2">, </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+                                       <span class="s1">tooltip</span><span class="s2">=</span><span class="s1">PROXY_BTN_HELP_HELP</span><span class="s2">)</span>
+    <span class="s1">geo </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextField</span><span class="s2">(</span><span class="s1">label</span><span class="s2">=</span><span class="s3">&quot;Ограничение по городу&quot;</span><span class="s2">, </span><span class="s1">width</span><span class="s2">=</span><span class="s4">400</span><span class="s2">, </span><span class="s1">on_change</span><span class="s2">=</span><span class="s1">required_field_for_more_info</span><span class="s2">, </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+                       <span class="s1">tooltip</span><span class="s2">=</span><span class="s1">GEO_HELP</span><span class="s2">)</span>
+    <span class="s1">start_btn </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">FilledButton</span><span class="s2">(</span><span class="s3">&quot;Старт&quot;</span><span class="s2">, </span><span class="s1">width</span><span class="s2">=</span><span class="s4">800</span><span class="s2">, </span><span class="s1">on_click</span><span class="s2">=</span><span class="s1">start_parser</span><span class="s2">, </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+    <span class="s1">stop_btn </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">OutlinedButton</span><span class="s2">(</span><span class="s3">&quot;Стоп&quot;</span><span class="s2">, </span><span class="s1">width</span><span class="s2">=</span><span class="s4">980</span><span class="s2">, </span><span class="s1">on_click</span><span class="s2">=</span><span class="s1">stop_parser</span><span class="s2">, </span><span class="s1">visible</span><span class="s2">=</span><span class="s0">False</span><span class="s2">,</span>
+                                 <span class="s1">style</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">ButtonStyle</span><span class="s2">(</span><span class="s1">bgcolor</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">RED_400</span><span class="s2">), </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+    <span class="s1">console_widget </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Text</span><span class="s2">(</span><span class="s1">width</span><span class="s2">=</span><span class="s4">800</span><span class="s2">, </span><span class="s1">height</span><span class="s2">=</span><span class="s4">100</span><span class="s2">, </span><span class="s1">color</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">GREEN</span><span class="s2">, </span><span class="s1">value</span><span class="s2">=</span><span class="s3">&quot;&quot;</span><span class="s2">, </span><span class="s1">selectable</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+                             <span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)  </span><span class="s6"># , bgcolor=ft.colors.GREY_50)</span>
+    <span class="s1">need_more_info </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Checkbox</span><span class="s2">(</span><span class="s3">&quot;Дополнительная информация&quot;</span><span class="s2">, </span><span class="s1">on_change</span><span class="s2">=</span><span class="s1">required_field_for_more_info</span><span class="s2">,</span>
+                                 <span class="s1">tooltip</span><span class="s2">=</span><span class="s1">NEED_MORE_INFO_HELP</span><span class="s2">)</span>
+    <span class="s1">debug_mode </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Checkbox</span><span class="s2">(</span><span class="s3">&quot;Режим отладки&quot;</span><span class="s2">, </span><span class="s1">tooltip</span><span class="s2">=</span><span class="s1">DEBUG_MODE_HELP</span><span class="s2">)</span>
+    <span class="s1">fast_speed </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Checkbox</span><span class="s2">(</span><span class="s3">&quot;Ускорить&quot;</span><span class="s2">, </span><span class="s1">tooltip</span><span class="s2">=</span><span class="s1">SKIP_JS_HELP</span><span class="s2">)</span>
+    <span class="s1">buy_me_coffe_btn </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextButton</span><span class="s2">(</span><span class="s3">&quot;Донат автору на пиво&quot;</span><span class="s2">,</span>
+                                     <span class="s1">on_click</span><span class="s2">=</span><span class="s0">lambda </span><span class="s1">e</span><span class="s2">: </span><span class="s1">page</span><span class="s2">.</span><span class="s1">launch_url</span><span class="s2">(</span><span class="s3">&quot;https://yoomoney.ru/to/410014382689862&quot;</span><span class="s2">),</span>
+                                     <span class="s1">style</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">ButtonStyle</span><span class="s2">(</span><span class="s1">color</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">GREEN_300</span><span class="s2">), </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+                                     <span class="s1">tooltip</span><span class="s2">=</span><span class="s1">BUY_ME_COFFE_BTN_HELP</span><span class="s2">)</span>
+    <span class="s1">report_issue_btn </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">TextButton</span><span class="s2">(</span><span class="s3">&quot;Сообщить о проблеме&quot;</span><span class="s2">, </span><span class="s1">on_click</span><span class="s2">=</span><span class="s0">lambda </span><span class="s1">e</span><span class="s2">: </span><span class="s1">page</span><span class="s2">.</span><span class="s1">launch_url</span><span class="s2">(</span>
+        <span class="s3">&quot;https://github.com/Duff89/parser_avito/issues&quot;</span><span class="s2">), </span><span class="s1">style</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">ButtonStyle</span><span class="s2">(</span><span class="s1">color</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">GREY</span><span class="s2">), </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+                                     <span class="s1">tooltip</span><span class="s2">=</span><span class="s1">REPORT_ISSUE_BTN_HELP</span><span class="s2">)</span>
+    <span class="s1">input_fields </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Column</span><span class="s2">(</span>
+        <span class="s2">[</span>
+            <span class="s1">label_required</span><span class="s2">,</span>
+            <span class="s1">url_input</span><span class="s2">,</span>
+            <span class="s1">ft</span><span class="s2">.</span><span class="s1">Row</span><span class="s2">(</span>
+                <span class="s2">[</span><span class="s1">min_price</span><span class="s2">, </span><span class="s1">max_price</span><span class="s2">],</span>
+                <span class="s1">alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">MainAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">,</span>
+                <span class="s1">spacing</span><span class="s2">=</span><span class="s4">0</span>
+            <span class="s2">),</span>
+            <span class="s1">ft</span><span class="s2">.</span><span class="s1">Text</span><span class="s2">(</span><span class="s3">&quot;&quot;</span><span class="s2">),</span>
+            <span class="s1">label_not_required</span><span class="s2">,</span>
+
+            <span class="s1">ft</span><span class="s2">.</span><span class="s1">Row</span><span class="s2">(</span>
+                <span class="s2">[</span><span class="s1">keyword_input</span><span class="s2">, </span><span class="s1">black_keyword_input</span><span class="s2">],</span>
+                <span class="s1">alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">MainAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">,</span>
+                <span class="s1">spacing</span><span class="s2">=</span><span class="s4">0</span>
+            <span class="s2">),</span>
+            <span class="s1">ft</span><span class="s2">.</span><span class="s1">Row</span><span class="s2">(</span>
+                <span class="s2">[</span><span class="s1">count_page</span><span class="s2">, </span><span class="s1">pause_sec</span><span class="s2">],</span>
+                <span class="s1">alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">MainAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">,</span>
+                <span class="s1">spacing</span><span class="s2">=</span><span class="s4">0</span>
+            <span class="s2">),</span>
+            <span class="s1">ft</span><span class="s2">.</span><span class="s1">Row</span><span class="s2">(</span>
+                <span class="s2">[</span><span class="s1">geo</span><span class="s2">, </span><span class="s1">max_view</span><span class="s2">],</span>
+                <span class="s1">alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">MainAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">,</span>
+                <span class="s1">spacing</span><span class="s2">=</span><span class="s4">0</span>
+            <span class="s2">),</span>
+            <span class="s1">ft</span><span class="s2">.</span><span class="s1">Row</span><span class="s2">(</span>
+                <span class="s2">[</span><span class="s1">tg_token</span><span class="s2">, </span><span class="s1">tg_chat_id</span><span class="s2">],</span>
+                <span class="s1">alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">MainAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">,</span>
+                <span class="s1">spacing</span><span class="s2">=</span><span class="s4">0</span>
+            <span class="s2">),</span>
+            <span class="s1">btn_test_tg</span><span class="s2">,</span>
+            <span class="s1">ft</span><span class="s2">.</span><span class="s1">Row</span><span class="s2">(</span>
+                <span class="s2">[</span><span class="s1">proxy</span><span class="s2">, </span><span class="s1">proxy_change_ip</span><span class="s2">],</span>
+                <span class="s1">alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">MainAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">,</span>
+                <span class="s1">spacing</span><span class="s2">=</span><span class="s4">0</span>
+            <span class="s2">),</span>
+            <span class="s1">proxy_btn_help</span><span class="s2">,</span>
+            <span class="s1">ft</span><span class="s2">.</span><span class="s1">Text</span><span class="s2">(</span><span class="s3">&quot;&quot;</span><span class="s2">),</span>
+            <span class="s1">ft</span><span class="s2">.</span><span class="s1">Row</span><span class="s2">(</span>
+                <span class="s2">[</span><span class="s1">need_more_info</span><span class="s2">, </span><span class="s1">debug_mode</span><span class="s2">, </span><span class="s1">fast_speed</span><span class="s2">],</span>
+                <span class="s1">alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">MainAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">,</span>
+                <span class="s1">spacing</span><span class="s2">=</span><span class="s4">0</span>
+            <span class="s2">),</span>
+
+        <span class="s2">],</span>
+        <span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+        <span class="s1">alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">MainAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">,</span>
+        <span class="s1">horizontal_alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">CrossAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">,</span>
+
+    <span class="s2">)</span>
+
+    <span class="s1">controls </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Column</span><span class="s2">(</span>
+        <span class="s2">[</span><span class="s1">console_widget</span><span class="s2">,</span>
+         <span class="s1">start_btn</span><span class="s2">,</span>
+         <span class="s1">stop_btn</span><span class="s2">],</span>
+        <span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+        <span class="s1">alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">MainAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">,</span>
+        <span class="s1">horizontal_alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">CrossAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span>
+    <span class="s2">)</span>
+    <span class="s1">other_btn </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Row</span><span class="s2">([</span><span class="s1">buy_me_coffe_btn</span><span class="s2">, </span><span class="s1">report_issue_btn</span><span class="s2">], </span><span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">, </span><span class="s1">alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">MainAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">)</span>
+    <span class="s1">all_field </span><span class="s2">= </span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Column</span><span class="s2">([</span><span class="s1">input_fields</span><span class="s2">, </span><span class="s1">controls</span><span class="s2">, </span><span class="s1">other_btn</span><span class="s2">], </span><span class="s1">alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">MainAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">,</span>
+                          <span class="s1">horizontal_alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">CrossAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">)</span>
+
+    <span class="s0">def </span><span class="s1">start_page</span><span class="s2">():</span>
+        <span class="s1">page</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">Column</span><span class="s2">(</span>
+            <span class="s2">[</span><span class="s1">all_field</span><span class="s2">],</span>
+            <span class="s1">expand</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+            <span class="s1">alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">MainAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">,</span>
+            <span class="s1">horizontal_alignment</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">CrossAxisAlignment</span><span class="s2">.</span><span class="s1">CENTER</span><span class="s2">,</span>
+            <span class="s1">scroll</span><span class="s2">=</span><span class="s1">ft</span><span class="s2">.</span><span class="s1">ScrollMode</span><span class="s2">.</span><span class="s1">AUTO</span>
+        <span class="s2">))</span>
+
+    <span class="s1">set_up</span><span class="s2">()</span>
+    <span class="s1">start_page</span><span class="s2">()</span>
+    <span class="s1">logger_console_init</span><span class="s2">()</span>
+
+
+<span class="s1">ft</span><span class="s2">.</span><span class="s1">app</span><span class="s2">(</span>
+    <span class="s1">target</span><span class="s2">=</span><span class="s1">main</span><span class="s2">,</span>
+<span class="s2">)</span>
+</pre>
+</body>
+</html>
